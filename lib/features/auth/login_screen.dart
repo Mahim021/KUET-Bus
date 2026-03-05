@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
+import '../main/main_shell.dart';
 import 'widgets/auth_field.dart';
 import 'signup_screen.dart';
 
@@ -32,9 +33,9 @@ class _LoginScreenState extends State<LoginScreen> {
       await _googleSignIn.signOut(); // clear cached account so picker always shows all accounts
       final account = await _googleSignIn.signIn();
       if (account != null && mounted) {
-        // TODO: hand off to your auth service
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Signed in as ${account.email}')),
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainShell()),
         );
       }
     } catch (e) {
@@ -121,7 +122,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: _canLogin ? () {} : null,
+                  onPressed: _canLogin
+                      ? () => Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const MainShell()),
+                          )
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     disabledBackgroundColor:
