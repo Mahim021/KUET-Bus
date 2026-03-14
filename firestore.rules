@@ -14,6 +14,22 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function hasNonEmptyString(field) {
+      return field is string && field.size() > 0;
+    }
+
+    function busUniqueIndexOk(busId) {
+      return hasNonEmptyString(request.resource.data.busNumberKey)
+        && existsAfter(/databases/$(database)/documents/unique_bus_numbers/$(request.resource.data.busNumberKey))
+        && getAfter(/databases/$(database)/documents/unique_bus_numbers/$(request.resource.data.busNumberKey)).data.busId == busId;
+    }
+
+    function routeUniqueIndexOk(routeId) {
+      return hasNonEmptyString(request.resource.data.routeNameKey)
+        && existsAfter(/databases/$(database)/documents/unique_route_names/$(request.resource.data.routeNameKey))
+        && getAfter(/databases/$(database)/documents/unique_route_names/$(request.resource.data.routeNameKey)).data.routeId == routeId;
+    }
+
     match /users/{uid} {
       allow read: if isOwner(uid) || isAdmin();
       allow create: if isOwner(uid) || isAdmin();
@@ -28,12 +44,16 @@ service cloud.firestore {
 
     match /buses/{docId} {
       allow read: if signedIn();
-      allow write: if isAdmin();
+      allow create: if isAdmin() && busUniqueIndexOk(docId);
+      allow update: if isAdmin() && busUniqueIndexOk(docId);
+      allow delete: if isAdmin();
     }
 
     match /routes/{docId} {
       allow read: if signedIn();
-      allow write: if isAdmin();
+      allow create: if isAdmin() && routeUniqueIndexOk(docId);
+      allow update: if isAdmin() && routeUniqueIndexOk(docId);
+      allow delete: if isAdmin();
     }
 
     match /schedules/{docId} {
@@ -44,6 +64,26 @@ service cloud.firestore {
     match /bus_locations/{docId} {
       allow read: if signedIn();
       allow write: if isAdmin();
+    }
+
+    match /unique_bus_numbers/{key} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && !exists(/databases/$(database)/documents/unique_bus_numbers/$(key))
+        && hasNonEmptyString(request.resource.data.busId)
+        && hasNonEmptyString(request.resource.data.busNumber);
+      allow delete: if isAdmin();
+      allow update: if false;
+    }
+
+    match /unique_route_names/{key} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && !exists(/databases/$(database)/documents/unique_route_names/$(key))
+        && hasNonEmptyString(request.resource.data.routeId)
+        && hasNonEmptyString(request.resource.data.routeName);
+      allow delete: if isAdmin();
+      allow update: if false;
     }
 
     // Deny everything else by default.

@@ -27,6 +27,19 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> get _busLocations =>
       _db.collection('bus_locations');
 
+  // Unique index collections (enforced via rules + transactions in this service).
+  CollectionReference<Map<String, dynamic>> get _uniqueBusNumbers =>
+      _db.collection('unique_bus_numbers');
+  CollectionReference<Map<String, dynamic>> get _uniqueRouteNames =>
+      _db.collection('unique_route_names');
+
+  String _normalizeKey(String raw) {
+    final lower = raw.trim().toLowerCase();
+    final dashed = lower.replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+    final collapsed = dashed.replaceAll(RegExp(r'-{2,}'), '-');
+    return collapsed.replaceAll(RegExp(r'^-+|-+$'), '');
+  }
+
   Stream<List<Notice>> watchNotices() {
     return (() async* {
       final user = FirebaseAuth.instance.currentUser;
@@ -49,6 +62,30 @@ class FirestoreService {
       yield* _schedules.orderBy('time').snapshots().map((snapshot) => snapshot
           .docs
           .map((doc) => BusSchedule.fromJson(doc.data(), id: doc.id))
+          .toList());
+    })();
+  }
+
+  Stream<List<Bus>> watchBuses() {
+    return (() async* {
+      final user = FirebaseAuth.instance.currentUser;
+      try {
+        await user?.getIdToken(true);
+      } catch (_) {}
+      yield* _buses.snapshots().map((snapshot) => snapshot.docs
+          .map((doc) => Bus.fromJson(doc.data(), id: doc.id))
+          .toList());
+    })();
+  }
+
+  Stream<List<BusRoute>> watchRoutes() {
+    return (() async* {
+      final user = FirebaseAuth.instance.currentUser;
+      try {
+        await user?.getIdToken(true);
+      } catch (_) {}
+      yield* _routes.snapshots().map((snapshot) => snapshot.docs
+          .map((doc) => BusRoute.fromJson(doc.data(), id: doc.id))
           .toList());
     })();
   }
@@ -165,25 +202,141 @@ class FirestoreService {
   }
 
   Future<void> upsertBus(Bus bus) {
-    if (bus.id == null || bus.id!.isEmpty) {
-      return _buses.add(bus.toJson()).then((_) => null);
+    final numberKey = _normalizeKey(bus.busNumber);
+    if (numberKey.isEmpty) {
+      return Future.error(Exception('Bus number is required'));
     }
-    return _buses.doc(bus.id).set(bus.toJson(), SetOptions(merge: true));
+
+    final busRef = (bus.id == null || bus.id!.isEmpty)
+        ? _buses.doc()
+        : _buses.doc(bus.id);
+
+    final busData = bus.toJson()
+      ..['busNumberKey'] = numberKey
+      ..['updatedAt'] = bus.updatedAt ?? DateTime.now();
+    if (busData['createdAt'] == null) {
+      busData['createdAt'] = bus.createdAt ?? DateTime.now();
+    }
+
+    final indexRef = _uniqueBusNumbers.doc(numberKey);
+
+    return _db.runTransaction((txn) async {
+      final busSnap = await txn.get(busRef);
+      final oldKey = busSnap.data()?['busNumberKey']?.toString().trim();
+
+      final indexSnap = await txn.get(indexRef);
+      if (indexSnap.exists) {
+        final claimed = indexSnap.data()?['busId']?.toString();
+        if (claimed != busRef.id) {
+          throw Exception('Bus number already exists');
+        }
+      } else {
+        txn.set(indexRef, {
+          'busId': busRef.id,
+          'busNumber': bus.busNumber.trim(),
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      if (oldKey != null &&
+          oldKey.isNotEmpty &&
+          oldKey != numberKey) {
+        final oldIndexRef = _uniqueBusNumbers.doc(oldKey);
+        final oldIndexSnap = await txn.get(oldIndexRef);
+        final claimed = oldIndexSnap.data()?['busId']?.toString();
+        if (oldIndexSnap.exists && claimed == busRef.id) {
+          txn.delete(oldIndexRef);
+        }
+      }
+
+      txn.set(busRef, busData, SetOptions(merge: true));
+    });
   }
 
   Future<void> deleteBus(String docId) {
-    return _buses.doc(docId).delete();
+    final busRef = _buses.doc(docId);
+    return _db.runTransaction((txn) async {
+      final snap = await txn.get(busRef);
+      final key = snap.data()?['busNumberKey']?.toString().trim();
+      if (key != null && key.isNotEmpty) {
+        final indexRef = _uniqueBusNumbers.doc(key);
+        final indexSnap = await txn.get(indexRef);
+        final claimed = indexSnap.data()?['busId']?.toString();
+        if (indexSnap.exists && claimed == docId) {
+          txn.delete(indexRef);
+        }
+      }
+      txn.delete(busRef);
+    });
   }
 
   Future<void> upsertRoute(BusRoute route) {
-    if (route.id == null || route.id!.isEmpty) {
-      return _routes.add(route.toJson()).then((_) => null);
+    final nameKey = _normalizeKey(route.routeName);
+    if (nameKey.isEmpty) {
+      return Future.error(Exception('Route name is required'));
     }
-    return _routes.doc(route.id).set(route.toJson(), SetOptions(merge: true));
+
+    final routeRef = (route.id == null || route.id!.isEmpty)
+        ? _routes.doc()
+        : _routes.doc(route.id);
+
+    final routeData = route.toJson()
+      ..['routeNameKey'] = nameKey
+      ..['updatedAt'] = route.updatedAt ?? DateTime.now();
+    if (routeData['createdAt'] == null) {
+      routeData['createdAt'] = route.createdAt ?? DateTime.now();
+    }
+
+    final indexRef = _uniqueRouteNames.doc(nameKey);
+
+    return _db.runTransaction((txn) async {
+      final routeSnap = await txn.get(routeRef);
+      final oldKey = routeSnap.data()?['routeNameKey']?.toString().trim();
+
+      final indexSnap = await txn.get(indexRef);
+      if (indexSnap.exists) {
+        final claimed = indexSnap.data()?['routeId']?.toString();
+        if (claimed != routeRef.id) {
+          throw Exception('Route name already exists');
+        }
+      } else {
+        txn.set(indexRef, {
+          'routeId': routeRef.id,
+          'routeName': route.routeName.trim(),
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      if (oldKey != null &&
+          oldKey.isNotEmpty &&
+          oldKey != nameKey) {
+        final oldIndexRef = _uniqueRouteNames.doc(oldKey);
+        final oldIndexSnap = await txn.get(oldIndexRef);
+        final claimed = oldIndexSnap.data()?['routeId']?.toString();
+        if (oldIndexSnap.exists && claimed == routeRef.id) {
+          txn.delete(oldIndexRef);
+        }
+      }
+
+      txn.set(routeRef, routeData, SetOptions(merge: true));
+    });
   }
 
   Future<void> deleteRoute(String docId) {
-    return _routes.doc(docId).delete();
+    final routeRef = _routes.doc(docId);
+    return _db.runTransaction((txn) async {
+      final snap = await txn.get(routeRef);
+      final key = snap.data()?['routeNameKey']?.toString().trim();
+      if (key != null && key.isNotEmpty) {
+        final indexRef = _uniqueRouteNames.doc(key);
+        final indexSnap = await txn.get(indexRef);
+        final claimed = indexSnap.data()?['routeId']?.toString();
+        if (indexSnap.exists && claimed == docId) {
+          txn.delete(indexRef);
+        }
+      }
+      txn.delete(routeRef);
+    });
   }
 
   Future<void> upsertSchedule(BusSchedule schedule) {

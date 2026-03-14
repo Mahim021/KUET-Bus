@@ -550,11 +550,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         .snapshots(),
                     builder: (context, snapshot) {
                       final docs = snapshot.data?.docs ?? const [];
-                      if (!docs.any((d) => d.id == selectedRouteId)) {
-                        selectedRouteId = null;
-                      }
+                      final selectedValue =
+                          selectedRouteId != null &&
+                                  selectedRouteId!.isNotEmpty &&
+                                  docs.any((d) => d.id == selectedRouteId)
+                              ? selectedRouteId
+                              : null;
                       return DropdownButtonFormField<String>(
-                        initialValue: selectedRouteId,
+                        value: selectedValue,
                         decoration: _decoration('Route Name'),
                         items: docs.map((doc) {
                           final routeName =
@@ -581,11 +584,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         .snapshots(),
                     builder: (context, snapshot) {
                       final docs = snapshot.data?.docs ?? const [];
-                      if (!docs.any((d) => d.id == selectedBusId)) {
-                        selectedBusId = null;
-                      }
+                      final selectedValue =
+                          selectedBusId != null &&
+                                  selectedBusId!.isNotEmpty &&
+                                  docs.any((d) => d.id == selectedBusId)
+                              ? selectedBusId
+                              : null;
                       return DropdownButtonFormField<String>(
-                        initialValue: selectedBusId,
+                        value: selectedValue,
                         decoration: _decoration('Bus Name'),
                         items: docs.map((doc) {
                           final data = doc.data();
@@ -917,6 +923,82 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           );
         }
 
+        if (_section == _AdminSection.schedules) {
+          return StreamBuilder<List<Bus>>(
+            stream: _firestore.watchBuses(),
+            builder: (context, busSnapshot) {
+              final buses = busSnapshot.data ?? const <Bus>[];
+              final busLabelById = <String, String>{};
+              for (final bus in buses) {
+                final id = bus.id;
+                if (id == null || id.isEmpty) {
+                  continue;
+                }
+                final label = bus.busName.trim().isNotEmpty
+                    ? bus.busName.trim()
+                    : bus.busNumber.trim();
+                if (label.isNotEmpty) {
+                  busLabelById[id] = label;
+                }
+              }
+
+              return StreamBuilder<List<BusRoute>>(
+                stream: _firestore.watchRoutes(),
+                builder: (context, routeSnapshot) {
+                  final routes = routeSnapshot.data ?? const <BusRoute>[];
+                  final routeLabelById = <String, String>{};
+                  for (final route in routes) {
+                    final id = route.id;
+                    if (id == null || id.isEmpty) {
+                      continue;
+                    }
+                    final label = route.routeName.trim();
+                    if (label.isNotEmpty) {
+                      routeLabelById[id] = label;
+                    }
+                  }
+
+                  return ListView.separated(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    itemCount: docs.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final doc = docs[index];
+                      final schedule =
+                          BusSchedule.fromJson(doc.data(), id: doc.id);
+                      final routeLabel =
+                          routeLabelById[schedule.routeId] ?? 'Unknown Route';
+                      final busLabel =
+                          busLabelById[schedule.busId] ?? 'Unknown Bus';
+
+                      return _recordCard(
+                        theme,
+                        title: '${schedule.time} ${schedule.period}',
+                        docId: doc.id,
+                        lines: [
+                          'Route: $routeLabel',
+                          'Bus: $busLabel',
+                          'Days: ${schedule.daysOfWeek.join(', ')}',
+                          'Active: ${schedule.isActive ? 'Yes' : 'No'}',
+                        ],
+                        onEdit: () => _showScheduleForm(existing: schedule),
+                        onDelete: () async {
+                          if (!await _confirmDelete('schedule')) {
+                            return;
+                          }
+                          await _runAdminAction(
+                              () => _firestore.deleteSchedule(doc.id),
+                              'Schedule deleted');
+                        },
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          );
+        }
+
         return ListView.separated(
           padding: const EdgeInsets.only(bottom: 12),
           itemCount: docs.length,
@@ -1003,14 +1085,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   },
                 );
               case _AdminSection.schedules:
+                // Handled above, so we can resolve route/bus names.
                 final schedule = BusSchedule.fromJson(doc.data(), id: doc.id);
                 return _recordCard(
                   theme,
                   title: '${schedule.time} ${schedule.period}',
                   docId: doc.id,
                   lines: [
-                    'Route ID: ${schedule.routeId}',
-                    'Bus ID: ${schedule.busId}',
+                    'Route: ${schedule.routeId}',
+                    'Bus: ${schedule.busId}',
                     'Days: ${schedule.daysOfWeek.join(', ')}',
                     'Active: ${schedule.isActive ? 'Yes' : 'No'}',
                   ],

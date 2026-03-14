@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../core/services/firestore_service.dart';
+import '../../models/bus.dart';
+import '../../models/bus_route.dart';
 import '../../models/bus_schedule.dart';
 
 class ScheduleScreen extends StatefulWidget {
@@ -180,42 +182,93 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       ),
                     );
                   }
-                  final data = snapshot.data ?? [];
-                  final query = _searchController.text.trim().toLowerCase();
-                  final entries = data.map(_toEntry).where((entry) {
-                    if (query.isEmpty) {
-                      return true;
-                    }
-                    return entry.route.toLowerCase().contains(query) ||
-                        entry.busNo.toLowerCase().contains(query);
-                  }).toList();
 
-                  final morning =
-                      entries.where((e) => e.period == 'AM').toList();
-                  final afternoon =
-                      entries.where((e) => e.period == 'PM').toList();
+                  final schedules = snapshot.data ?? const <BusSchedule>[];
+                  return StreamBuilder<List<Bus>>(
+                    stream: _firestore.watchBuses(),
+                    builder: (context, busSnapshot) {
+                      final buses = busSnapshot.data ?? const <Bus>[];
+                      final busNameById = <String, String>{};
+                      for (final bus in buses) {
+                        final id = bus.id;
+                        if (id == null || id.isEmpty) {
+                          continue;
+                        }
+                        final label = bus.busName.trim().isNotEmpty
+                            ? bus.busName.trim()
+                            : bus.busNumber.trim();
+                        if (label.isNotEmpty) {
+                          busNameById[id] = label;
+                        }
+                      }
 
-                  if (entries.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'No schedules available',
-                        style: TextStyle(color: theme.subText, fontSize: 15),
-                      ),
-                    );
-                  }
+                      return StreamBuilder<List<BusRoute>>(
+                        stream: _firestore.watchRoutes(),
+                        builder: (context, routeSnapshot) {
+                          final routes =
+                              routeSnapshot.data ?? const <BusRoute>[];
+                          final routeNameById = <String, String>{};
+                          for (final route in routes) {
+                            final id = route.id;
+                            if (id == null || id.isEmpty) {
+                              continue;
+                            }
+                            final label = route.routeName.trim();
+                            if (label.isNotEmpty) {
+                              routeNameById[id] = label;
+                            }
+                          }
 
-                  return ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    children: [
-                      _SectionHeader(title: 'Morning Departures'),
-                      const SizedBox(height: 12),
-                      ...morning.map((s) => _ScheduleCard(entry: s)),
-                      const SizedBox(height: 24),
-                      _SectionHeader(title: 'Afternoon Departures'),
-                      const SizedBox(height: 12),
-                      ...afternoon.map((s) => _ScheduleCard(entry: s)),
-                      const SizedBox(height: 20),
-                    ],
+                          final query =
+                              _searchController.text.trim().toLowerCase();
+                          final entries =
+                              schedules.map((schedule) => _ScheduleEntry(
+                                    time: schedule.time,
+                                    period: schedule.period,
+                                    route: routeNameById[schedule.routeId] ??
+                                        schedule.routeId,
+                                    busNo: busNameById[schedule.busId] ??
+                                        schedule.busId,
+                                  ))
+                                  .where((entry) {
+                            if (query.isEmpty) {
+                              return true;
+                            }
+                            return entry.route.toLowerCase().contains(query) ||
+                                entry.busNo.toLowerCase().contains(query);
+                          }).toList();
+
+                          final morning =
+                              entries.where((e) => e.period == 'AM').toList();
+                          final afternoon =
+                              entries.where((e) => e.period == 'PM').toList();
+
+                          if (entries.isEmpty) {
+                            return Center(
+                              child: Text(
+                                'No schedules available',
+                                style: TextStyle(
+                                    color: theme.subText, fontSize: 15),
+                              ),
+                            );
+                          }
+
+                          return ListView(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            children: [
+                              _SectionHeader(title: 'Morning Departures'),
+                              const SizedBox(height: 12),
+                              ...morning.map((s) => _ScheduleCard(entry: s)),
+                              const SizedBox(height: 24),
+                              _SectionHeader(title: 'Afternoon Departures'),
+                              const SizedBox(height: 12),
+                              ...afternoon.map((s) => _ScheduleCard(entry: s)),
+                              const SizedBox(height: 20),
+                            ],
+                          );
+                        },
+                      );
+                    },
                   );
                 },
               ),
@@ -226,14 +279,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
-  _ScheduleEntry _toEntry(BusSchedule schedule) {
-    return _ScheduleEntry(
-      time: schedule.time,
-      period: schedule.period,
-      route: schedule.routeId,
-      busNo: schedule.busId,
-    );
-  }
+  // Note: schedule entries are built in the StreamBuilder so we can map IDs
+  // to their display names (busName/routeName) while still falling back to IDs.
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -338,7 +385,7 @@ class _ScheduleCardState extends State<_ScheduleCard> {
                         size: 14, color: theme.subText),
                     const SizedBox(width: 4),
                     Text(
-                      'Bus No: ${widget.entry.busNo}',
+                      'Bus: ${widget.entry.busNo}',
                       style: TextStyle(
                         color: theme.subText,
                         fontSize: 13,
