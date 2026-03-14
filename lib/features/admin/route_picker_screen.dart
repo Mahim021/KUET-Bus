@@ -36,6 +36,7 @@ class _RoutePickerScreenState extends State<RoutePickerScreen> {
   final _mapController = MapController();
   final List<_RoadFeature> _roads = [];
   final List<String> _selectedRoadIds = [];
+  bool _hasUserEditedSelection = false;
 
   bool _loading = true;
   String? _error;
@@ -151,8 +152,23 @@ class _RoutePickerScreenState extends State<RoutePickerScreen> {
       final id = nearest!.id;
       if (!_selectedRoadIds.contains(id)) {
         _selectedRoadIds.add(id);
+        _hasUserEditedSelection = true;
       }
     });
+  }
+
+  List<LatLng> _initialPath() {
+    return widget.initialCoordinates
+        .map((e) => LatLng(e.lat, e.lng))
+        .toList(growable: false);
+  }
+
+  List<LatLng> _displayPath() {
+    final initialPath = _initialPath();
+    if (!_hasUserEditedSelection && initialPath.length >= 2) {
+      return initialPath;
+    }
+    return _selectedPath();
   }
 
   double _minDistanceToRoadSegments(LatLng tap, _RoadFeature road) {
@@ -209,28 +225,25 @@ class _RoutePickerScreenState extends State<RoutePickerScreen> {
     }
 
     final byId = {for (final road in _roads) road.id: road};
-    final path = <LatLng>[];
-
+    final selectedRoads = <_RoadFeature>[];
     for (final id in _selectedRoadIds) {
       final road = byId[id];
-      if (road == null || road.points.isEmpty) {
-        continue;
+      if (road != null && road.points.length >= 2) {
+        selectedRoads.add(road);
       }
+    }
 
+    if (selectedRoads.isEmpty) {
+      return const [];
+    }
+
+    final orientedRoads = _bestOrientedRoadChain(selectedRoads);
+    final path = <LatLng>[];
+
+    for (final oriented in orientedRoads) {
       if (path.isEmpty) {
-        path.addAll(road.points);
-        continue;
-      }
-
-      final last = path.last;
-      final firstDistance = _distanceToPointMeters(last, road.points.first);
-      final lastDistance = _distanceToPointMeters(last, road.points.last);
-
-      final oriented = firstDistance <= lastDistance
-          ? road.points
-          : road.points.reversed.toList();
-
-      if (_distanceToPointMeters(path.last, oriented.first) < 0.6) {
+        path.addAll(oriented);
+      } else if (_distanceToPointMeters(path.last, oriented.first) < 0.6) {
         path.addAll(oriented.skip(1));
       } else {
         path.addAll(oriented);
@@ -238,6 +251,55 @@ class _RoutePickerScreenState extends State<RoutePickerScreen> {
     }
 
     return path;
+  }
+
+  List<List<LatLng>> _bestOrientedRoadChain(List<_RoadFeature> selectedRoads) {
+    final n = selectedRoads.length;
+    final variants = <List<List<LatLng>>>[];
+    for (final road in selectedRoads) {
+      variants.add([road.points, road.points.reversed.toList()]);
+    }
+
+    final dp = List.generate(n, (_) => List.filled(2, double.infinity));
+    final parent = List.generate(n, (_) => List.filled(2, -1));
+
+    dp[0][0] = 0;
+    dp[0][1] = 0;
+
+    for (var i = 1; i < n; i++) {
+      for (var currOri = 0; currOri < 2; currOri++) {
+        final currStart = variants[i][currOri].first;
+        for (var prevOri = 0; prevOri < 2; prevOri++) {
+          if (!dp[i - 1][prevOri].isFinite) {
+            continue;
+          }
+
+          final prevEnd = variants[i - 1][prevOri].last;
+          final joinCost = _distanceToPointMeters(prevEnd, currStart);
+          final candidateCost = dp[i - 1][prevOri] + joinCost;
+
+          if (candidateCost < dp[i][currOri]) {
+            dp[i][currOri] = candidateCost;
+            parent[i][currOri] = prevOri;
+          }
+        }
+      }
+    }
+
+    var bestLastOri = dp[n - 1][0] <= dp[n - 1][1] ? 0 : 1;
+    final chosen = List<int>.filled(n, 0);
+    chosen[n - 1] = bestLastOri;
+
+    for (var i = n - 1; i > 0; i--) {
+      final prev = parent[i][chosen[i]];
+      chosen[i - 1] = prev == -1 ? 0 : prev;
+    }
+
+    final oriented = <List<LatLng>>[];
+    for (var i = 0; i < n; i++) {
+      oriented.add(variants[i][chosen[i]]);
+    }
+    return oriented;
   }
 
   List<String> _matchRoadsFromCoordinates(
@@ -248,52 +310,57 @@ class _RoutePickerScreenState extends State<RoutePickerScreen> {
       return const [];
     }
 
-    final remaining = initialCoordinates
+    final points = initialCoordinates
         .map((e) => LatLng(e.lat, e.lng))
-        .toList(growable: true);
-    final selected = <String>[];
+        .toList(growable: false);
 
-    while (remaining.length >= 2) {
-      _RoadFeature? bestRoad;
-      List<LatLng>? bestPoints;
-      var bestScore = 0;
+    // Slightly generous tolerance to handle Firestore floating-point drift.
+    const vertexToleranceMeters = 3.0;
 
-      for (final road in roads) {
-        final directScore = _prefixMatchLength(remaining, road.points);
-        final reversePoints = road.points.reversed.toList();
-        final reverseScore = _prefixMatchLength(remaining, reversePoints);
-        final score = directScore >= reverseScore ? directScore : reverseScore;
-        final candidatePoints =
-            directScore >= reverseScore ? road.points : reversePoints;
-
-        if (score > bestScore) {
-          bestScore = score;
-          bestRoad = road;
-          bestPoints = candidatePoints;
+    // For every road compute the FIRST and LAST index of saved points that
+    // lie within tolerance of any of the road's vertices.  Gaps in the
+    // middle are intentionally ignored — this prevents a single mismatched
+    // point from truncating a long road's coverage.
+    final intervals = <_RoadInterval>[];
+    for (final road in roads) {
+      int? first;
+      var last = -1;
+      for (var i = 0; i < points.length; i++) {
+        final hit = road.points.any(
+          (rp) =>
+              _distanceToPointMeters(points[i], rp) <= vertexToleranceMeters,
+        );
+        if (hit) {
+          first ??= i;
+          last = i;
         }
       }
-
-      if (bestRoad == null || bestPoints == null || bestScore < 2) {
-        break;
+      // Require at least 2 distinct saved points on this road.
+      if (first != null && last - first >= 1) {
+        intervals.add(_RoadInterval(road: road, first: first, last: last));
       }
+    }
 
-      selected.add(bestRoad.id);
-      remaining.removeRange(0, bestScore - 1);
+    // Greedy "jump-game" interval cover.
+    // At each step pick the road whose interval starts at/before the cursor
+    // and extends the farthest.  A junction-only road covers just 1-2 shared
+    // nodes and can never beat the road that covers the bulk of the path.
+    final selected = <String>[];
+    var cursor = 0;
+    while (cursor < points.length - 1) {
+      _RoadInterval? best;
+      for (final iv in intervals) {
+        if (selected.contains(iv.road.id)) continue;
+        // Allow interval to start up to 1 point ahead (junction tolerance).
+        if (iv.first > cursor + 1) continue;
+        if (best == null || iv.last > best.last) best = iv;
+      }
+      if (best == null || best.last <= cursor) break;
+      selected.add(best.road.id);
+      cursor = best.last;
     }
 
     return selected;
-  }
-
-  int _prefixMatchLength(List<LatLng> source, List<LatLng> candidate) {
-    final length = math.min(source.length, candidate.length);
-    var count = 0;
-    for (var index = 0; index < length; index++) {
-      if (_distanceToPointMeters(source[index], candidate[index]) > 1.5) {
-        break;
-      }
-      count++;
-    }
-    return count;
   }
 
   double _distanceToPointMeters(LatLng a, LatLng b) {
@@ -305,7 +372,7 @@ class _RoutePickerScreenState extends State<RoutePickerScreen> {
   }
 
   void _confirmSelection() {
-    final path = _selectedPath();
+    final path = _displayPath();
     if (path.length < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('At least 2 map points are required.')),
@@ -330,6 +397,8 @@ class _RoutePickerScreenState extends State<RoutePickerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final previewPath = _displayPath();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Select Route From Map'),
@@ -338,14 +407,20 @@ class _RoutePickerScreenState extends State<RoutePickerScreen> {
             tooltip: 'Undo last',
             onPressed: _selectedRoadIds.isEmpty
                 ? null
-                : () => setState(() => _selectedRoadIds.removeLast()),
+                : () => setState(() {
+                      _selectedRoadIds.removeLast();
+                      _hasUserEditedSelection = true;
+                    }),
             icon: const Icon(Icons.undo_rounded),
           ),
           IconButton(
             tooltip: 'Clear selection',
             onPressed: _selectedRoadIds.isEmpty
                 ? null
-                : () => setState(_selectedRoadIds.clear),
+                : () => setState(() {
+                      _selectedRoadIds.clear();
+                      _hasUserEditedSelection = true;
+                    }),
             icon: const Icon(Icons.clear_all_rounded),
           ),
         ],
@@ -390,9 +465,9 @@ class _RoutePickerScreenState extends State<RoutePickerScreen> {
                                       _selectedRoadIds.contains(e.id) ? 4 : 2,
                                 ),
                               ),
-                              if (_selectedPath().length >= 2)
+                              if (previewPath.length >= 2)
                                 Polyline(
-                                  points: _selectedPath(),
+                                  points: previewPath,
                                   color: Colors.deepOrange,
                                   strokeWidth: 5,
                                 ),
@@ -438,5 +513,17 @@ class _RoadFeature {
     required this.id,
     required this.name,
     required this.points,
+  });
+}
+
+class _RoadInterval {
+  final _RoadFeature road;
+  final int first;
+  final int last;
+
+  const _RoadInterval({
+    required this.road,
+    required this.first,
+    required this.last,
   });
 }
