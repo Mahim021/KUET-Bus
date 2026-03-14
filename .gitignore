@@ -47,3 +47,9 @@ app.*.map.json
 # Firebase service account key (keep out of VCS)
 kuet-bus-firebase-adminsdk-*.json
 serviceAccountKey.json
+
+# Node dependencies used by tooling scripts
+/node_modules/
+
+# Firebase Android app config
+/android/app/google-services.json
