@@ -4,7 +4,6 @@ import '../../core/theme/app_theme.dart';
 import '../admin/admin_dashboard_screen.dart';
 import '../home/home_screen.dart';
 import '../schedule/schedule_screen.dart';
-import '../live_map/live_map_screen.dart';
 import '../notices/notices_screen.dart';
 import '../profile/profile_screen.dart';
 
@@ -18,6 +17,7 @@ class MainShell extends StatefulWidget {
 class MainShellState extends State<MainShell> {
   int _currentIndex = 0;
   final _roleService = const AuthRoleService();
+  bool _isAdminLast = false;
 
   void navigateTo(int index) {
     setState(() => _currentIndex = index);
@@ -27,33 +27,46 @@ class MainShellState extends State<MainShell> {
     navigateTo(index);
   }
 
+  int _noticesIndex() => _isAdminLast ? 3 : 2;
+
+  void navigateToNotices() => navigateTo(_noticesIndex());
+
   List<Widget> _screens(bool isAdmin) {
-    final screens = <Widget>[
-      const HomeScreen(),
-      const ScheduleScreen(),
-      const LiveMapScreen(),
-      const NoticesScreen(),
-      const ProfileScreen(),
-    ];
-    if (isAdmin) {
-      screens.add(const AdminDashboardScreen());
+    if (!isAdmin) {
+      return const <Widget>[
+        HomeScreen(),
+        ScheduleScreen(),
+        NoticesScreen(),
+        ProfileScreen(),
+      ];
     }
-    return screens;
+
+    return const <Widget>[
+      HomeScreen(),
+      ScheduleScreen(),
+      AdminDashboardScreen(),
+      NoticesScreen(),
+      ProfileScreen(),
+    ];
   }
 
   List<_NavItem> _items(bool isAdmin) {
-    final items = <_NavItem>[
-      const _NavItem(icon: Icons.home_rounded, label: 'Home'),
-      const _NavItem(icon: Icons.schedule_rounded, label: 'Schedule'),
-      const _NavItem(icon: Icons.map_rounded, label: 'Live Map'),
-      const _NavItem(icon: Icons.campaign_rounded, label: 'Notices'),
-      const _NavItem(icon: Icons.person_rounded, label: 'Profile'),
-    ];
-    if (isAdmin) {
-      items.add(const _NavItem(
-          icon: Icons.admin_panel_settings_rounded, label: 'Admin'));
+    if (!isAdmin) {
+      return const <_NavItem>[
+        _NavItem(icon: Icons.home_rounded, label: 'Home'),
+        _NavItem(icon: Icons.schedule_rounded, label: 'Schedule'),
+        _NavItem(icon: Icons.campaign_rounded, label: 'Notices'),
+        _NavItem(icon: Icons.person_rounded, label: 'Profile'),
+      ];
     }
-    return items;
+
+    return const <_NavItem>[
+      _NavItem(icon: Icons.home_rounded, label: 'Home'),
+      _NavItem(icon: Icons.schedule_rounded, label: 'Schedule'),
+      _NavItem(icon: Icons.admin_panel_settings_rounded, label: 'Admin'),
+      _NavItem(icon: Icons.campaign_rounded, label: 'Notices'),
+      _NavItem(icon: Icons.person_rounded, label: 'Profile'),
+    ];
   }
 
   @override
@@ -63,6 +76,7 @@ class MainShellState extends State<MainShell> {
       initialData: false,
       builder: (context, snapshot) {
         final isAdmin = snapshot.data ?? false;
+        _isAdminLast = isAdmin;
         final screens = _screens(isAdmin);
         final items = _items(isAdmin);
         final safeIndex = _currentIndex >= screens.length ? 0 : _currentIndex;
@@ -117,7 +131,9 @@ class _BottomNavBar extends StatelessWidget {
           height: 72,
           child: Row(
             children: List.generate(items.length, (i) {
-              final isCenter = i == 2;
+              final hasCenter = items.length.isOdd;
+              final centerIndex = items.length ~/ 2;
+              final isCenter = hasCenter && i == centerIndex;
               final isActive = currentIndex == i;
 
               if (isCenter) {

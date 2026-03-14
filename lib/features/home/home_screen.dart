@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../main/main_shell.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../models/notice.dart';
 import '../../core/services/firestore_service.dart';
+import '../../core/services/weather_service.dart';
+import '../live_map/live_map_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -101,7 +104,7 @@ class HomeScreen extends StatelessWidget {
             GestureDetector(
               onTap: () {
                 final shell = context.findAncestorStateOfType<MainShellState>();
-                shell?.navigateTo(3);
+                shell?.navigateToNotices();
               },
               child: Text(
                 'View All',
@@ -246,8 +249,9 @@ class HomeScreen extends StatelessWidget {
         // Live Bus Location — full width
         GestureDetector(
           onTap: () {
-            final shell = context.findAncestorStateOfType<MainShellState>();
-            shell?.navigateTo(2);
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const LiveMapScreen()),
+            );
           },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -435,10 +439,106 @@ class HomeScreen extends StatelessWidget {
 
 // ---------- sub-widgets ----------
 
-class _WeatherCard extends StatelessWidget {
+class _WeatherCard extends StatefulWidget {
+  const _WeatherCard();
+
+  @override
+  State<_WeatherCard> createState() => _WeatherCardState();
+}
+
+class _WeatherCardState extends State<_WeatherCard> {
+  final _service = WeatherService();
+  Timer? _clockTimer;
+  Timer? _refreshTimer;
+
+  DateTime _now = DateTime.now();
+  WeatherSnapshot? _weather;
+  bool _loading = true;
+
+  // Fixed location for now. We can switch to device location later if needed.
+  static const _kKhulnaLat = 22.8456;
+  static const _kKhulnaLon = 89.5403;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Keep the clock fresh without rebuilding every second.
+    _clockTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (!mounted) return;
+      setState(() => _now = DateTime.now());
+    });
+
+    _fetchWeather();
+    _refreshTimer = Timer.periodic(const Duration(minutes: 10), (_) {
+      _fetchWeather();
+    });
+  }
+
+  @override
+  void dispose() {
+    _clockTimer?.cancel();
+    _refreshTimer?.cancel();
+    _service.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchWeather() async {
+    if (!mounted) return;
+    setState(() => _loading = true);
+    try {
+      final snapshot = await _service.fetchCurrentWeather(
+        latitude: _kKhulnaLat,
+        longitude: _kKhulnaLon,
+      );
+      if (!mounted) return;
+      setState(() {
+        _weather = snapshot;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  String _two(int n) => n.toString().padLeft(2, '0');
+
+  String _formatTime(DateTime dt) {
+    final hour12 = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final period = dt.hour >= 12 ? 'PM' : 'AM';
+    return '${hour12}:${_two(dt.minute)} $period';
+  }
+
+  String _formatDate(DateTime dt) {
+    const months = [
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC'
+    ];
+    final mon = months[dt.month - 1];
+    return '${dt.day} $mon';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = AppThemeData.of(context);
+    final weather = _weather;
+
+    final desc = weather?.summary ?? (_loading ? 'Loading...' : 'Unavailable');
+    final temp = weather?.temperatureC;
+    final tempText = temp == null ? '--°C' : '${temp.round()}°C';
+    final icon = weather?.icon ?? Icons.wb_cloudy_rounded;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
@@ -461,8 +561,7 @@ class _WeatherCard extends StatelessWidget {
               color: const Color(0xFFFFF8E1),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.wb_cloudy_rounded,
-                color: Color(0xFFFFB300), size: 28),
+            child: Icon(icon, color: const Color(0xFFFFB300), size: 28),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -470,7 +569,7 @@ class _WeatherCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '28°C  •  Partly Cloudy',
+                  '$tempText  •  $desc',
                   style: TextStyle(
                     color: theme.text,
                     fontSize: 15,
@@ -492,7 +591,7 @@ class _WeatherCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '10:30 AM',
+                _formatTime(_now),
                 style: TextStyle(
                   color: theme.text,
                   fontSize: 18,
@@ -501,7 +600,7 @@ class _WeatherCard extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                'TODAY, 24 OCT',
+                'TODAY, ${_formatDate(_now)}',
                 style: TextStyle(
                   color: theme.subText,
                   fontSize: 11,
