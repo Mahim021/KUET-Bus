@@ -1215,6 +1215,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required VoidCallback onEdit,
     required VoidCallback onDelete,
   }) {
+    Widget iconAction({
+      required IconData icon,
+      required VoidCallback onTap,
+      required Color background,
+      required Color iconColor,
+      required String tooltip,
+    }) {
+      return Tooltip(
+        message: tooltip,
+        child: InkWell(
+          onTap: _busy ? null : onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: background,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: theme.border),
+            ),
+            child: Icon(icon, color: iconColor, size: 18),
+          ),
+        ),
+      );
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -1238,6 +1264,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ),
               ),
+              const SizedBox(width: 10),
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1246,10 +1273,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: theme.border),
                 ),
-                child: Text(
-                  docId,
-                  style: TextStyle(color: theme.subText, fontSize: 11),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 160),
+                  child: Text(
+                    docId,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: theme.subText, fontSize: 11),
+                  ),
                 ),
+              ),
+              const SizedBox(width: 10),
+              iconAction(
+                icon: Icons.edit_rounded,
+                onTap: onEdit,
+                tooltip: 'Update',
+                background: theme.surfaceDeep,
+                iconColor: theme.text,
+              ),
+              const SizedBox(width: 8),
+              iconAction(
+                icon: Icons.delete_outline_rounded,
+                onTap: onDelete,
+                tooltip: 'Delete',
+                background: const Color(0xFFFDECEC),
+                iconColor: const Color(0xFFC62828),
               ),
             ],
           ),
@@ -1262,14 +1309,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 style: TextStyle(color: theme.subText, fontSize: 13),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: _actionButton('Update', onEdit)),
-              const SizedBox(width: 8),
-              Expanded(child: _dangerButton('Delete', onDelete)),
-            ],
           ),
         ],
       ),
