@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../core/services/firestore_service.dart';
+import '../../models/bus_location.dart';
 
 // ── Coordinates ───────────────────────────────────────────────────────────────
 // KUET campus, Khulna, Bangladesh
@@ -33,6 +36,8 @@ class LiveMapScreen extends StatefulWidget {
 
 class _LiveMapScreenState extends State<LiveMapScreen> {
   final _mapController = MapController();
+  final _firestore = FirestoreService();
+  StreamSubscription<List<BusLocation>>? _locationSub;
   LatLng _busPosition = _kInitialBus;
   bool _showDetails = true;
 
@@ -45,6 +50,25 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
 
   void _centerOnBus() {
     _mapController.move(_busPosition, 15.0);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _locationSub = _firestore.watchBusLocations().listen((locations) {
+      if (!mounted || locations.isEmpty) {
+        return;
+      }
+      final latest = locations.first;
+      final newPos = LatLng(latest.position.lat, latest.position.lng);
+      setState(() => _busPosition = newPos);
+    });
+  }
+
+  @override
+  void dispose() {
+    _locationSub?.cancel();
+    super.dispose();
   }
 
   @override
@@ -65,8 +89,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
             children: [
               // OSM tile layer
               TileLayer(
-                urlTemplate:
-                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.kuet.kuet_bus',
                 maxNativeZoom: 19,
               ),
@@ -513,8 +536,8 @@ class _BusDetailsSheet extends StatelessWidget {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {},
-                        icon: const Icon(Icons.notifications_outlined,
-                            size: 18),
+                        icon:
+                            const Icon(Icons.notifications_outlined, size: 18),
                         label: const Text('Alert'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: theme.text,

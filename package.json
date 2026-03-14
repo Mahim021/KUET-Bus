@@ -1,0 +1,13 @@
+{
+  "name": "kuet-bus-seeder",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "set-admin": "node tools/set_admin_claim.js",
+    "seed": "node tools/seed_firestore_node.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.7.0"
+  }
+}

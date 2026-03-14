@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../core/services/firestore_service.dart';
+import '../../models/bus_schedule.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -12,26 +14,15 @@ class ScheduleScreen extends StatefulWidget {
 class _ScheduleScreenState extends State<ScheduleScreen> {
   int _selectedDayIndex = 0;
   final _searchController = TextEditingController();
+  final _firestore = FirestoreService();
 
   final _days = ['MON\n12', 'TUE\n13', 'WED\n14', 'THU\n15', 'FRI\n16'];
 
-  final _morningSchedules = [
-    _ScheduleEntry(
-        time: '07:30', period: 'AM', route: 'Campus → Town', busNo: '04 (Drabir)'),
-    _ScheduleEntry(
-        time: '08:15', period: 'AM', route: 'Campus → Phulbari', busNo: '07 (Torsa)'),
-    _ScheduleEntry(
-        time: '09:00', period: 'AM', route: 'Town → Campus', busNo: '01 (Rupsa)'),
-  ];
-
-  final _afternoonSchedules = [
-    _ScheduleEntry(
-        time: '01:45', period: 'PM', route: 'Town → Campus', busNo: '02 (Shetu)'),
-    _ScheduleEntry(
-        time: '05:30', period: 'PM', route: 'Campus → City Circle', busNo: '11 (Kapotakkho)'),
-    _ScheduleEntry(
-        time: '06:00', period: 'PM', route: 'Campus → Kalishpur', busNo: '05 (Padma)'),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
@@ -99,8 +90,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   style: TextStyle(color: theme.text, fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'Search route or bus no...',
-                    hintStyle:
-                        TextStyle(color: theme.subText, fontSize: 14),
+                    hintStyle: TextStyle(color: theme.subText, fontSize: 14),
                     prefixIcon: Icon(Icons.search_rounded,
                         color: theme.subText, size: 20),
                     border: InputBorder.none,
@@ -128,13 +118,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       width: 56,
                       margin: const EdgeInsets.only(right: 12),
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.primary
-                            : theme.surface,
+                        color: isSelected ? AppColors.primary : theme.surface,
                         borderRadius: BorderRadius.circular(16),
-                        border: isSelected
-                            ? null
-                            : Border.all(color: theme.border),
+                        border:
+                            isSelected ? null : Border.all(color: theme.border),
                         boxShadow: isSelected
                             ? null
                             : theme.isDark
@@ -153,9 +140,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           Text(
                             parts[0],
                             style: TextStyle(
-                              color: isSelected
-                                  ? Colors.white70
-                                  : theme.subText,
+                              color:
+                                  isSelected ? Colors.white70 : theme.subText,
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.5,
@@ -165,9 +151,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           Text(
                             parts[1],
                             style: TextStyle(
-                              color: isSelected
-                                  ? Colors.white
-                                  : theme.text,
+                              color: isSelected ? Colors.white : theme.text,
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
                             ),
@@ -182,23 +166,72 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             const SizedBox(height: 24),
             // Schedule list
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                children: [
-                  _SectionHeader(title: 'Morning Departures'),
-                  const SizedBox(height: 12),
-                  ..._morningSchedules.map((s) => _ScheduleCard(entry: s)),
-                  const SizedBox(height: 24),
-                  _SectionHeader(title: 'Afternoon Departures'),
-                  const SizedBox(height: 12),
-                  ..._afternoonSchedules.map((s) => _ScheduleCard(entry: s)),
-                  const SizedBox(height: 20),
-                ],
+              child: StreamBuilder<List<BusSchedule>>(
+                stream: _firestore.watchSchedules(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Error loading schedules: ${snapshot.error}',
+                        style: TextStyle(color: theme.subText),
+                      ),
+                    );
+                  }
+                  final data = snapshot.data ?? [];
+                  final query = _searchController.text.trim().toLowerCase();
+                  final entries = data.map(_toEntry).where((entry) {
+                    if (query.isEmpty) {
+                      return true;
+                    }
+                    return entry.route.toLowerCase().contains(query) ||
+                        entry.busNo.toLowerCase().contains(query);
+                  }).toList();
+
+                  final morning =
+                      entries.where((e) => e.period == 'AM').toList();
+                  final afternoon =
+                      entries.where((e) => e.period == 'PM').toList();
+
+                  if (entries.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No schedules available',
+                        style: TextStyle(color: theme.subText, fontSize: 15),
+                      ),
+                    );
+                  }
+
+                  return ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    children: [
+                      _SectionHeader(title: 'Morning Departures'),
+                      const SizedBox(height: 12),
+                      ...morning.map((s) => _ScheduleCard(entry: s)),
+                      const SizedBox(height: 24),
+                      _SectionHeader(title: 'Afternoon Departures'),
+                      const SizedBox(height: 12),
+                      ...afternoon.map((s) => _ScheduleCard(entry: s)),
+                      const SizedBox(height: 20),
+                    ],
+                  );
+                },
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  _ScheduleEntry _toEntry(BusSchedule schedule) {
+    return _ScheduleEntry(
+      time: schedule.time,
+      period: schedule.period,
+      route: schedule.routeId,
+      busNo: schedule.busId,
     );
   }
 }
@@ -322,9 +355,7 @@ class _ScheduleCardState extends State<_ScheduleCard> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: _alerted
-                    ? AppColors.primary
-                    : theme.surfaceDeep,
+                color: _alerted ? AppColors.primary : theme.surfaceDeep,
                 shape: BoxShape.circle,
               ),
               child: Icon(

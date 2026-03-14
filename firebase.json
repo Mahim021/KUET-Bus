@@ -1,0 +1,31 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "kuet-bus",
+          "appId": "1:75617116863:android:a5e912b8a1a4eaaefe1c0a",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "kuet-bus",
+          "configurations": {
+            "android": "1:75617116863:android:a5e912b8a1a4eaaefe1c0a",
+            "ios": "1:75617116863:ios:f0d7c540bb8417a6fe1c0a",
+            "macos": "1:75617116863:ios:f0d7c540bb8417a6fe1c0a",
+            "web": "1:75617116863:web:f346b70f7c91b091fe1c0a",
+            "windows": "1:75617116863:web:e93c59c542d6e837fe1c0a"
+          }
+        }
+      }
+    }
+  }
+}

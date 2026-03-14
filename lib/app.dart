@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'core/theme/app_theme.dart';
 import 'features/splash/splash_screen.dart';
 import 'features/main/main_shell.dart';
+import 'features/auth/login_screen.dart';
 
 class KuetBusApp extends StatefulWidget {
   const KuetBusApp({super.key});
@@ -33,12 +35,32 @@ class _KuetBusAppState extends State<KuetBusApp> {
           ),
           useMaterial3: true,
         ),
-        initialRoute: '/',
+        home: const SplashScreen(),
         routes: {
-          '/': (_) => const SplashScreen(),
           '/home': (_) => const MainShell(),
+          '/login': (_) => const LoginScreen(),
         },
       ),
+    );
+  }
+}
+
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SplashScreen();
+        }
+        if (snapshot.data != null) {
+          return const MainShell();
+        }
+        return const LoginScreen();
+      },
     );
   }
 }

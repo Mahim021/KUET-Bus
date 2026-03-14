@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
+import '../../core/services/firestore_service.dart';
 import '../main/main_shell.dart';
 import 'widgets/auth_field.dart';
 import 'signup_screen.dart';
@@ -17,6 +19,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _firestore = FirestoreService();
+  bool _isSubmitting = false;
 
   bool get _isEmailValid =>
       _emailController.text.trim().contains('@') &&
@@ -28,21 +32,64 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
 
+  Future<void> _bootstrapProfile(User user) {
+    return _firestore.ensureStudentProfile(user);
+  }
+
+  void _navigateToHome(NavigatorState navigator) {
+    navigator.pushReplacement(
+      MaterialPageRoute(builder: (_) => const MainShell()),
+    );
+  }
+
   Future<void> _signInWithGoogle() async {
+    if (_isSubmitting) {
+      return;
+    }
+    setState(() => _isSubmitting = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     try {
-      await _googleSignIn.signOut(); // clear cached account so picker always shows all accounts
+      await _googleSignIn
+          .signOut(); // clear cached account so picker always shows all accounts
       final account = await _googleSignIn.signIn();
-      if (account != null && mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainShell()),
+      if (account != null) {
+        final auth = await account.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: auth.accessToken,
+          idToken: auth.idToken,
         );
+        final result =
+            await FirebaseAuth.instance.signInWithCredential(credential);
+        final user = result.user;
+        if (user != null) {
+          await _bootstrapProfile(user);
+        }
+        try {
+          final token = await user?.getIdToken();
+          // ignore: avoid_print
+          print(
+              'Google login uid=${user?.uid} token=${token?.substring(0, 20)}...');
+          if (mounted) {
+            messenger.showSnackBar(
+              SnackBar(content: Text('Signed in: ${user?.uid}')),
+            );
+          }
+        } catch (e) {
+          // ignore: avoid_print
+          print('Failed to get token: $e');
+        }
+        _navigateToHome(navigator);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(content: Text('Sign-in failed: $e')),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
       }
     }
   }
@@ -123,11 +170,65 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 54,
                 child: ElevatedButton(
                   onPressed: _canLogin
-                      ? () => Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const MainShell()),
-                          )
+                      ? () async {
+                          if (_isSubmitting) {
+                            return;
+                          }
+                          setState(() => _isSubmitting = true);
+                          final messenger = ScaffoldMessenger.of(context);
+                          final navigator = Navigator.of(context);
+                          final email = _emailController.text.trim();
+                          final password = _passwordController.text;
+                          try {
+                            final cred = await FirebaseAuth.instance
+                                .signInWithEmailAndPassword(
+                              email: email,
+                              password: password,
+                            );
+                            if (cred.user != null) {
+                              final user = FirebaseAuth.instance.currentUser;
+                              if (user != null) {
+                                await _bootstrapProfile(user);
+                              }
+                              try {
+                                final token = await user?.getIdToken();
+                                // ignore: avoid_print
+                                print(
+                                    'Login successful uid=${user?.uid} token=${token?.substring(0, 20)}...');
+                                if (mounted) {
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                        content:
+                                            Text('Signed in: ${user?.uid}')),
+                                  );
+                                }
+                              } catch (e) {
+                                // ignore: avoid_print
+                                print('Failed to get token: $e');
+                              }
+                              _navigateToHome(navigator);
+                            }
+                          } on FirebaseAuthException catch (e) {
+                            if (!mounted) {
+                              return;
+                            }
+                            messenger.showSnackBar(
+                              SnackBar(
+                                  content: Text(e.message ?? 'Login failed')),
+                            );
+                          } catch (e) {
+                            if (!mounted) {
+                              return;
+                            }
+                            messenger.showSnackBar(
+                              SnackBar(content: Text('Login failed: $e')),
+                            );
+                          } finally {
+                            if (mounted) {
+                              setState(() => _isSubmitting = false);
+                            }
+                          }
+                        }
                       : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -137,11 +238,21 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(16)),
                     elevation: 0,
                   ),
-                  child: const Text('Log In',
-                      style: TextStyle(
-                          color: AppColors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700)),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(AppColors.white),
+                          ),
+                        )
+                      : const Text('Log In',
+                          style: TextStyle(
+                              color: AppColors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700)),
                 ),
               ),
               const SizedBox(height: 28),
@@ -161,7 +272,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: double.infinity,
                 height: 54,
                 child: OutlinedButton(
-                  onPressed: _signInWithGoogle,
+                  onPressed: _isSubmitting ? null : _signInWithGoogle,
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.divider),
                     shape: RoundedRectangleBorder(
