@@ -7,30 +7,61 @@ import '../../core/services/firestore_service.dart';
 import '../../models/student.dart';
 import '../auth/login_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final _firestore = FirestoreService();
+  Future<void>? _ensureProfileFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // Create the profile doc if it doesn't exist yet.
+      _ensureProfileFuture = _firestore.ensureStudentProfile(user);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = AppThemeData.of(context);
     final user = FirebaseAuth.instance.currentUser;
-    final firestore = FirestoreService();
+
+    if (user == null) {
+      return const Scaffold(body: Center(child: Text('Not signed in')));
+    }
 
     return Scaffold(
       backgroundColor: theme.bg,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: FutureBuilder<Student?>(
-            future: user == null
-                ? Future.value(null)
-                : firestore.fetchStudent(user.uid),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              return _buildProfileContent(context, theme, snapshot.data, user);
-            },
-          ),
+        child: FutureBuilder<void>(
+          future: _ensureProfileFuture,
+          builder: (context, ensureSnapshot) {
+            if (ensureSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            return StreamBuilder<Student?>(
+              stream: _firestore.watchStudent(user.uid),
+              builder: (context, snapshot) {
+                return SingleChildScrollView(
+                  child: _buildProfileContent(
+                    context,
+                    theme,
+                    snapshot.data,
+                    user,
+                    _firestore,
+                  ),
+                );
+              },
+            );
+          },
         ),
       ),
     );
@@ -38,7 +69,12 @@ class ProfileScreen extends StatelessWidget {
 }
 
 Widget _buildProfileContent(
-    BuildContext context, AppThemeData theme, Student? student, User? user) {
+  BuildContext context,
+  AppThemeData theme,
+  Student? student,
+  User user,
+  FirestoreService firestore,
+) {
   final name = student?.name ?? user?.displayName ?? 'Student';
   final kuetId = student?.kuetId ?? 'N/A';
   final department = student?.department ?? 'Not provided';
@@ -80,15 +116,25 @@ Widget _buildProfileContent(
                   Positioned(
                     bottom: 0,
                     right: 0,
-                    child: Container(
-                      width: 28,
-                      height: 28,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
+                    child: InkWell(
+                      onTap: () => _openEditProfileSheet(
+                        context,
+                        theme,
+                        firestore,
+                        user,
+                        student,
                       ),
-                      child: const Icon(Icons.edit_rounded,
-                          size: 14, color: AppColors.primary),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.edit_rounded,
+                            size: 14, color: AppColors.primary),
+                      ),
                     ),
                   ),
                 ],
@@ -136,6 +182,17 @@ Widget _buildProfileContent(
         _Section(
           title: 'Account Info',
           children: [
+            _ActionTile(
+              icon: Icons.edit_rounded,
+              label: 'Edit Profile',
+              onTap: () => _openEditProfileSheet(
+                context,
+                theme,
+                firestore,
+                user,
+                student,
+              ),
+            ),
             _InfoTile(
               icon: Icons.email_outlined,
               label: 'Email',
@@ -230,6 +287,186 @@ Widget _buildProfileContent(
       ],
     ),
   );
+}
+
+Future<void> _openEditProfileSheet(
+  BuildContext context,
+  AppThemeData theme,
+  FirestoreService firestore,
+  User user,
+  Student? student,
+) {
+  final nameCtrl = TextEditingController(text: student?.name ?? user.displayName ?? '');
+  final kuetIdCtrl = TextEditingController(text: student?.kuetId ?? '');
+  final deptCtrl = TextEditingController(text: student?.department ?? '');
+  final batchCtrl = TextEditingController(text: student?.batch ?? '');
+  final phoneCtrl = TextEditingController(text: student?.phoneNumber ?? '');
+  final bloodCtrl = TextEditingController(text: student?.bloodGroup ?? '');
+  final hometownCtrl = TextEditingController(text: student?.hometown ?? '');
+
+  String? nullIfBlank(String value) {
+    final t = value.trim();
+    return t.isEmpty ? null : t;
+  }
+
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: theme.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+    ),
+    builder: (sheetContext) {
+      var busy = false;
+
+      Widget field(String label, TextEditingController ctrl,
+          {TextInputType? keyboardType, bool enabled = true}) {
+        return TextField(
+          controller: ctrl,
+          enabled: enabled && !busy,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            labelText: label,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        );
+      }
+
+      return StatefulBuilder(
+        builder: (context, setModalState) {
+          Future<void> save() async {
+            if (busy) return;
+            final name = nameCtrl.text.trim();
+            if (name.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Name is required')),
+              );
+              return;
+            }
+
+            setModalState(() => busy = true);
+            try {
+              await user.updateDisplayName(name);
+              final now = DateTime.now();
+
+              final update = <String, dynamic>{
+                'uid': user.uid,
+                'name': name,
+                'email': (user.email ?? '').trim(),
+                'phoneNumber': nullIfBlank(phoneCtrl.text),
+                'bloodGroup': nullIfBlank(bloodCtrl.text),
+                'hometown': nullIfBlank(hometownCtrl.text),
+                'updatedAt': now,
+              };
+              if (student?.createdAt == null) {
+                update['createdAt'] = now;
+              }
+              await firestore.updateStudentFields(user.uid, update);
+
+              if (!sheetContext.mounted) return;
+              Navigator.of(sheetContext).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Profile updated')),
+              );
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed: $e')),
+              );
+            } finally {
+              setModalState(() => busy = false);
+            }
+          }
+
+          return Padding(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              MediaQuery.of(context).viewInsets.bottom + 16,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Edit Profile',
+                    style: TextStyle(
+                      color: theme.text,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  field('Name', nameCtrl),
+                  const SizedBox(height: 10),
+                  field('KUET ID', kuetIdCtrl, enabled: false),
+                  const SizedBox(height: 10),
+                  field('Department', deptCtrl, enabled: false),
+                  const SizedBox(height: 10),
+                  field('Batch', batchCtrl, enabled: false),
+                  const SizedBox(height: 10),
+                  field('Phone', phoneCtrl, keyboardType: TextInputType.phone),
+                  const SizedBox(height: 10),
+                  field('Blood Group (optional)', bloodCtrl),
+                  const SizedBox(height: 10),
+                  field('Hometown (optional)', hometownCtrl),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed:
+                              busy ? null : () => Navigator.of(sheetContext).pop(),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: busy ? null : save,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: busy
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
+                                  ),
+                                )
+                              : const Text(
+                                  'Save',
+                                  style: TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  ).whenComplete(() {
+    nameCtrl.dispose();
+    kuetIdCtrl.dispose();
+    deptCtrl.dispose();
+    batchCtrl.dispose();
+    phoneCtrl.dispose();
+    bloodCtrl.dispose();
+    hometownCtrl.dispose();
+  });
 }
 
 Future<void> _logout(BuildContext context) async {

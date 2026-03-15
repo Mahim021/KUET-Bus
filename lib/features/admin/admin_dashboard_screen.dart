@@ -1265,24 +1265,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: theme.bg,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: theme.border),
-                ),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 160),
-                  child: Text(
-                    docId,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: theme.subText, fontSize: 11),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
               iconAction(
                 icon: Icons.edit_rounded,
                 onTap: onEdit,

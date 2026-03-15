@@ -40,6 +40,18 @@ class FirestoreService {
     return collapsed.replaceAll(RegExp(r'^-+|-+$'), '');
   }
 
+  static final RegExp _kuetStudentEmailRegex =
+      RegExp(r'^[A-Za-z]+(\d{7})@stud\.kuet\.ac\.bd$');
+
+  bool isValidKuetStudentEmail(String email) {
+    return _kuetStudentEmailRegex.hasMatch(email.trim());
+  }
+
+  String _kuetIdFromEmail(String email) {
+    final match = _kuetStudentEmailRegex.firstMatch(email.trim());
+    return match?.group(1) ?? '';
+  }
+
   Stream<List<Notice>> watchNotices() {
     return (() async* {
       final user = FirebaseAuth.instance.currentUser;
@@ -104,10 +116,27 @@ class FirestoreService {
     return Student.fromJson(doc.data()!, uid: doc.id);
   }
 
+  Stream<Student?> watchStudent(String uid) {
+    return _users.doc(uid).snapshots().map((doc) {
+      if (!doc.exists) {
+        return null;
+      }
+      final data = doc.data();
+      if (data == null) {
+        return null;
+      }
+      return Student.fromJson(data, uid: doc.id);
+    });
+  }
+
   Future<void> upsertStudent(Student student) {
     return _users
         .doc(student.uid)
         .set(student.toJson(), SetOptions(merge: true));
+  }
+
+  Future<void> updateStudentFields(String uid, Map<String, dynamic> updates) {
+    return _users.doc(uid).set(updates, SetOptions(merge: true));
   }
 
   Future<void> deleteUser(String uid) {
@@ -126,20 +155,25 @@ class FirestoreService {
     String? photoUrl,
     String? photoPath,
   }) async {
+    final emailValue = (user.email ?? '').trim();
+    final derivedKuetId = _kuetIdFromEmail(emailValue);
+    if (derivedKuetId.isEmpty) {
+      throw Exception('Only KUET student emails are allowed');
+    }
+
     final existing = await fetchStudent(user.uid);
     if (existing != null) {
       return existing;
     }
 
-    final localPart = (user.email ?? '').split('@').first;
-    final derivedKuetId = _extractKuetId(localPart);
+    final derivedDept = _deriveDeptCode(derivedKuetId);
     final student = Student(
       uid: user.uid,
       name: (name ?? user.displayName ?? 'KUET Student').trim(),
-      email: user.email ?? '',
-      kuetId: (kuetId ?? derivedKuetId).trim(),
-      department: (department ?? 'Not provided').trim(),
-      batch: (batch ?? _deriveBatch(kuetId ?? derivedKuetId)).trim(),
+      email: emailValue,
+      kuetId: derivedKuetId,
+      department: derivedDept,
+      batch: _deriveBatch(derivedKuetId),
       role: 'student',
       bloodGroup: _nullIfBlank(bloodGroup),
       hometown: _nullIfBlank(hometown),
@@ -153,17 +187,19 @@ class FirestoreService {
     return student;
   }
 
-  String _extractKuetId(String value) {
-    final match = RegExp(r'\d+').firstMatch(value);
-    return match?.group(0) ?? '';
-  }
-
   String _deriveBatch(String kuetId) {
     if (kuetId.length < 2) {
       return 'Not provided';
     }
     final prefix = kuetId.substring(0, 2);
     return '20$prefix';
+  }
+
+  String _deriveDeptCode(String kuetId) {
+    if (kuetId.length < 4) {
+      return 'Not provided';
+    }
+    return kuetId.substring(2, 4);
   }
 
   String? _nullIfBlank(String? value) {

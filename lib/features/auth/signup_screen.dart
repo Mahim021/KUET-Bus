@@ -18,9 +18,9 @@ class _SignupScreenState extends State<SignupScreen> {
   final _confirmController = TextEditingController();
   bool _agreed = false;
 
-  // Accepts only  name_uniqueID@stud.kuet.ac.bd
+  // Accepts only: <lastname><7 digit kuet roll>@stud.kuet.ac.bd
   static final _kuetEmailRegex =
-      RegExp(r'^[a-zA-Z0-9._+-]+@stud\.kuet\.ac\.bd$');
+      RegExp(r'^[A-Za-z]+\d{7}@stud\.kuet\.ac\.bd$');
 
   bool get _isNameValid => _nameController.text.trim().isNotEmpty;
   bool get _isEmailValid =>

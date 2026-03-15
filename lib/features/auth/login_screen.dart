@@ -22,9 +22,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final _firestore = FirestoreService();
   bool _isSubmitting = false;
 
+  static final _kuetEmailRegex =
+      RegExp(r'^[A-Za-z]+\d{7}@stud\.kuet\.ac\.bd$');
+
   bool get _isEmailValid =>
-      _emailController.text.trim().contains('@') &&
-      _emailController.text.trim().isNotEmpty;
+      _kuetEmailRegex.hasMatch(_emailController.text.trim());
 
   bool get _isPasswordValid => _passwordController.text.length >= 6;
 
@@ -34,6 +36,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _bootstrapProfile(User user) {
     return _firestore.ensureStudentProfile(user);
+  }
+
+  Future<bool> _enforceKuetEmail(User? user) async {
+    final email = (user?.email ?? '').trim();
+    if (!_kuetEmailRegex.hasMatch(email)) {
+      await GoogleSignIn().signOut();
+      await FirebaseAuth.instance.signOut();
+      return false;
+    }
+    return true;
   }
 
   void _navigateToHome(NavigatorState navigator) {
@@ -63,6 +75,17 @@ class _LoginScreenState extends State<LoginScreen> {
             await FirebaseAuth.instance.signInWithCredential(credential);
         final user = result.user;
         if (user != null) {
+          final ok = await _enforceKuetEmail(user);
+          if (!ok) {
+            if (mounted) {
+              messenger.showSnackBar(
+                const SnackBar(
+                    content: Text(
+                        'Only KUET student emails are allowed (lastname+7 digits@stud.kuet.ac.bd).')),
+              );
+            }
+            return;
+          }
           await _bootstrapProfile(user);
         }
         try {
@@ -180,6 +203,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           final email = _emailController.text.trim();
                           final password = _passwordController.text;
                           try {
+                            if (!_kuetEmailRegex.hasMatch(email)) {
+                              throw FirebaseAuthException(code: 'invalid-email');
+                            }
                             final cred = await FirebaseAuth.instance
                                 .signInWithEmailAndPassword(
                               email: email,
@@ -188,6 +214,18 @@ class _LoginScreenState extends State<LoginScreen> {
                             if (cred.user != null) {
                               final user = FirebaseAuth.instance.currentUser;
                               if (user != null) {
+                                final ok = await _enforceKuetEmail(user);
+                                if (!ok) {
+                                  if (!mounted) {
+                                    return;
+                                  }
+                                  messenger.showSnackBar(
+                                    const SnackBar(
+                                        content: Text(
+                                            'Only KUET student emails are allowed (lastname+7 digits@stud.kuet.ac.bd).')),
+                                  );
+                                  return;
+                                }
                                 await _bootstrapProfile(user);
                               }
                               try {
@@ -210,6 +248,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             }
                           } on FirebaseAuthException catch (e) {
                             if (!mounted) {
+                              return;
+                            }
+                            if (e.code == 'invalid-email') {
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Use KUET student email: lastname+7 digits@stud.kuet.ac.bd'),
+                                ),
+                              );
                               return;
                             }
                             messenger.showSnackBar(

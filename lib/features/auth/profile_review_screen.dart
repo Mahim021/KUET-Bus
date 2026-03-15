@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../core/services/firestore_service.dart';
-import '../../models/student.dart';
 import '../main/main_shell.dart';
 
 class ProfileReviewScreen extends StatefulWidget {
@@ -25,58 +24,46 @@ class ProfileReviewScreen extends StatefulWidget {
 class _ProfileReviewScreenState extends State<ProfileReviewScreen> {
   late final TextEditingController _nameController;
   late final TextEditingController _emailController;
-  late final TextEditingController _kuetIdController;
-  late final TextEditingController _departmentController;
-  late final TextEditingController _batchController;
+  late final String _kuetId;
+  late final String _deptCode;
+  late final String _batch;
   final _bloodGroupController = TextEditingController();
   final _hometownController = TextEditingController();
   final _phoneController = TextEditingController();
   final _firestore = FirestoreService();
   bool _isSubmitting = false;
 
+  static final _kuetEmailRegex =
+      RegExp(r'^[A-Za-z]+(\d{7})@stud\.kuet\.ac\.bd$');
+
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.name);
     _emailController = TextEditingController(text: widget.email);
-    final localPart = widget.email.split('@').first;
-    final kuetId = _extractKuetId(localPart);
-    _kuetIdController = TextEditingController(text: kuetId);
-    _departmentController = TextEditingController();
-    _batchController = TextEditingController(text: _deriveBatch(kuetId));
+
+    final match = _kuetEmailRegex.firstMatch(widget.email.trim());
+    _kuetId = match?.group(1) ?? '';
+    _batch = _kuetId.length >= 2 ? '20${_kuetId.substring(0, 2)}' : '';
+    _deptCode = _kuetId.length >= 4 ? _kuetId.substring(2, 4) : '';
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _kuetIdController.dispose();
-    _departmentController.dispose();
-    _batchController.dispose();
     _bloodGroupController.dispose();
     _hometownController.dispose();
     _phoneController.dispose();
     super.dispose();
   }
 
-  String _extractKuetId(String value) {
-    final match = RegExp(r'\d+').firstMatch(value);
-    return match?.group(0) ?? '';
-  }
-
-  String _deriveBatch(String kuetId) {
-    if (kuetId.length < 2) {
-      return '';
-    }
-    return '20${kuetId.substring(0, 2)}';
-  }
-
   bool get _canSubmit {
     return _nameController.text.trim().isNotEmpty &&
         _emailController.text.trim().isNotEmpty &&
-        _kuetIdController.text.trim().isNotEmpty &&
-        _departmentController.text.trim().isNotEmpty &&
-        _batchController.text.trim().isNotEmpty;
+        _kuetId.isNotEmpty &&
+        _batch.isNotEmpty &&
+        _deptCode.isNotEmpty;
   }
 
   Future<void> _completeSignup() async {
@@ -86,9 +73,14 @@ class _ProfileReviewScreenState extends State<ProfileReviewScreen> {
 
     setState(() => _isSubmitting = true);
     try {
+      final email = _emailController.text.trim();
+      if (!_kuetEmailRegex.hasMatch(email)) {
+        throw FirebaseAuthException(code: 'invalid-email');
+      }
+
       final credential =
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
+        email: email,
         password: widget.password,
       );
       final user = credential.user;
@@ -97,21 +89,19 @@ class _ProfileReviewScreenState extends State<ProfileReviewScreen> {
       }
 
       await user.updateDisplayName(_nameController.text.trim());
-      final student = Student(
-        uid: user.uid,
+
+      // Immutable identity fields are derived from the KUET email.
+      await _firestore.ensureStudentProfile(
+        user,
         name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        kuetId: _kuetIdController.text.trim(),
-        department: _departmentController.text.trim(),
-        batch: _batchController.text.trim(),
-        bloodGroup: _optional(_bloodGroupController.text),
-        hometown: _optional(_hometownController.text),
-        phoneNumber: _optional(_phoneController.text),
-        photoUrl: user.photoURL,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
       );
-      await _firestore.upsertStudent(student);
+
+      await _firestore.updateStudentFields(user.uid, {
+        'bloodGroup': _optional(_bloodGroupController.text),
+        'hometown': _optional(_hometownController.text),
+        'phoneNumber': _optional(_phoneController.text),
+        'updatedAt': DateTime.now(),
+      });
 
       if (!mounted) {
         return;
@@ -123,6 +113,14 @@ class _ProfileReviewScreenState extends State<ProfileReviewScreen> {
       );
     } on FirebaseAuthException catch (error) {
       if (!mounted) {
+        return;
+      }
+      if (error.code == 'invalid-email') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Use KUET student email: lastname+7 digits@stud.kuet.ac.bd')),
+        );
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
@@ -152,9 +150,6 @@ class _ProfileReviewScreenState extends State<ProfileReviewScreen> {
     final fields = [
       ('Full Name', _nameController, false, TextInputType.name),
       ('Email Address', _emailController, true, TextInputType.emailAddress),
-      ('KUET ID', _kuetIdController, false, TextInputType.number),
-      ('Department', _departmentController, false, TextInputType.text),
-      ('Batch', _batchController, false, TextInputType.text),
       ('Blood Group', _bloodGroupController, false, TextInputType.text),
       ('Hometown', _hometownController, false, TextInputType.text),
       ('Phone Number', _phoneController, false, TextInputType.phone),
@@ -218,6 +213,37 @@ class _ProfileReviewScreenState extends State<ProfileReviewScreen> {
                 readOnly: field.$3,
                 keyboardType: field.$4,
                 onChanged: (_) => setState(() {}),
+              ),
+            ),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.fieldFill,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'KUET Identity (from email)',
+                    style: TextStyle(
+                      color: AppColors.bodyText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('KUET ID: $_kuetId',
+                      style: const TextStyle(
+                          color: AppColors.subText, fontSize: 13)),
+                  Text('Batch: $_batch',
+                      style: const TextStyle(
+                          color: AppColors.subText, fontSize: 13)),
+                  Text('Dept Code: $_deptCode',
+                      style: const TextStyle(
+                          color: AppColors.subText, fontSize: 13)),
+                ],
               ),
             ),
             const SizedBox(height: 32),
