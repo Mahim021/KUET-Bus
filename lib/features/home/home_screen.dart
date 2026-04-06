@@ -47,16 +47,20 @@ class HomeScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Row(
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: theme.surfaceDeep,
-              shape: BoxShape.circle,
-              border: Border.all(color: theme.border),
+          GestureDetector(
+            onTap: () =>
+                context.findAncestorStateOfType<MainShellState>()?.navigateTo(4),
+            child: Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: theme.surfaceDeep,
+                shape: BoxShape.circle,
+                border: Border.all(color: theme.border),
+              ),
+              child: Icon(Icons.person_rounded,
+                  size: 28, color: theme.subText),
             ),
-            child: Icon(Icons.person_rounded,
-                size: 28, color: theme.subText),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -97,8 +101,11 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
           ),
-          Stack(
-            children: [
+          GestureDetector(
+            onTap: () =>
+                context.findAncestorStateOfType<MainShellState>()?.navigateTo(3),
+            child: Stack(
+              children: [
               Container(
                 width: 44,
                 height: 44,
@@ -130,6 +137,7 @@ class HomeScreen extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ],
       ),
     );
@@ -497,7 +505,7 @@ class _WeatherCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = AppThemeData.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
         color: theme.surface,
         borderRadius: BorderRadius.circular(20),
@@ -515,11 +523,11 @@ class _WeatherCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF8E1),
+              color: theme.surfaceDeep,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.wb_cloudy_rounded,
-                color: Color(0xFFFFB300), size: 28),
+            child: Icon(Icons.wb_cloudy_outlined,
+                color: theme.subText, size: 26),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -527,16 +535,16 @@ class _WeatherCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '28°C  •  Partly Cloudy',
+                  'Weather Info',
                   style: TextStyle(
                     color: theme.text,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
-                  'Khulna, Bangladesh',
+                  'Not available right now.',
                   style: TextStyle(
                     color: theme.subText,
                     fontSize: 12,
@@ -545,28 +553,20 @@ class _WeatherCard extends StatelessWidget {
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '10:30 AM',
-                style: TextStyle(
-                  color: theme.text,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: theme.surfaceDeep,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Soon',
+              style: TextStyle(
+                color: theme.subText,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
               ),
-              const SizedBox(height: 2),
-              Text(
-                'TODAY, 24 OCT',
-                style: TextStyle(
-                  color: theme.subText,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),

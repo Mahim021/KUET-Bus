@@ -25,7 +25,20 @@ const _kRoute = [
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 class LiveMapScreen extends StatefulWidget {
-  const LiveMapScreen({super.key});
+  final String busNo;
+  final String driver;
+  final String route;
+  final String eta;
+  final String status;
+
+  const LiveMapScreen({
+    super.key,
+    this.busNo = '',
+    this.driver = 'Unknown',
+    this.route = '',
+    this.eta = '--',
+    this.status = 'On route',
+  });
 
   @override
   State<LiveMapScreen> createState() => _LiveMapScreenState();
@@ -116,13 +129,6 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Row(
                 children: [
-                  _NavButton(
-                    icon: Icons.arrow_back_ios_new_rounded,
-                    onTap: () => Navigator.maybePop(context),
-                    background: theme.surface,
-                    iconColor: theme.text,
-                  ),
-                  const SizedBox(width: 12),
                   Expanded(
                     child: Container(
                       height: 48,
@@ -175,6 +181,10 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
               right: 0,
               child: _BusDetailsSheet(
                 onClose: () => setState(() => _showDetails = false),
+                busNo: widget.busNo,
+                driver: widget.driver,
+                route: widget.route,
+                eta: widget.eta,
               ),
             ),
 
@@ -364,8 +374,18 @@ class _NavButton extends StatelessWidget {
 
 class _BusDetailsSheet extends StatelessWidget {
   final VoidCallback onClose;
+  final String busNo;
+  final String driver;
+  final String route;
+  final String eta;
 
-  const _BusDetailsSheet({required this.onClose});
+  const _BusDetailsSheet({
+    required this.onClose,
+    this.busNo = '',
+    this.driver = 'Unknown',
+    this.route = '',
+    this.eta = '--',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -447,7 +467,7 @@ class _BusDetailsSheet extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'BUS: DAKBANGLA',
+                            busNo.isNotEmpty ? 'Bus $busNo' : 'Bus Details',
                             style: TextStyle(
                               color: theme.text,
                               fontSize: 16,
@@ -461,7 +481,7 @@ class _BusDetailsSheet extends StatelessWidget {
                                   size: 14, color: theme.subText),
                               const SizedBox(width: 4),
                               Text(
-                                'Driver: Ahmed Ali',
+                                'Driver: $driver',
                                 style: TextStyle(
                                     color: theme.subText, fontSize: 13),
                               ),
@@ -474,7 +494,7 @@ class _BusDetailsSheet extends StatelessWidget {
                                   size: 14, color: theme.subText),
                               const SizedBox(width: 4),
                               Text(
-                                'En route → KUET Campus',
+                                route.isNotEmpty ? route : 'En route',
                                 style: TextStyle(
                                     color: theme.subText, fontSize: 12),
                               ),
@@ -487,7 +507,7 @@ class _BusDetailsSheet extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          '8 min',
+                          eta,
                           style: TextStyle(
                             color: theme.text,
                             fontSize: 22,
@@ -495,7 +515,7 @@ class _BusDetailsSheet extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'TO CAMPUS',
+                          'ETA',
                           style: TextStyle(
                             color: theme.subText,
                             fontSize: 11,

@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
+import '../../../core/services/user_session.dart';
 import '../main/main_shell.dart';
 import 'widgets/auth_field.dart';
 import 'signup_screen.dart';
@@ -33,6 +34,11 @@ class _LoginScreenState extends State<LoginScreen> {
       await _googleSignIn.signOut(); // clear cached account so picker always shows all accounts
       final account = await _googleSignIn.signIn();
       if (account != null && mounted) {
+        UserSession.instance.setFromGoogle(
+          name: account.displayName ?? account.email.split('@').first,
+          email: account.email,
+          photoUrl: account.photoUrl,
+        );
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MainShell()),
@@ -56,6 +62,169 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _rebuild() => setState(() {});
 
+  void _showForgotPassword() {
+    final emailCtrl = TextEditingController();
+    bool sent = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final bottom = MediaQuery.of(ctx).viewInsets.bottom;
+            return Container(
+              decoration: const BoxDecoration(
+                color: AppColors.background,
+                borderRadius:
+                    BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              padding: EdgeInsets.fromLTRB(24, 16, 24, bottom + 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 22),
+                      decoration: BoxDecoration(
+                        color: AppColors.divider,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.lock_reset_rounded,
+                            color: AppColors.primary, size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      const Text(
+                        'Forgot Password',
+                        style: TextStyle(
+                          color: AppColors.bodyText,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Enter your registered email and we\'ll send you a link to reset your password.',
+                    style: TextStyle(
+                      color: AppColors.subText,
+                      fontSize: 13,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  if (!sent) ...
+                    [
+                      AuthField(
+                        hint: 'Email Address',
+                        icon: Icons.email_outlined,
+                        controller: emailCtrl,
+                        keyboardType: TextInputType.emailAddress,
+                        onChanged: (_) => setSheetState(() {}),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: emailCtrl.text.trim().contains('@')
+                              ? () => setSheetState(() => sent = true)
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            disabledBackgroundColor:
+                                AppColors.primary.withValues(alpha: 0.4),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Send Reset Link',
+                            style: TextStyle(
+                              color: AppColors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ]
+                  else ...
+                    [
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.green.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle_outline_rounded,
+                                color: Colors.green.shade600, size: 22),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Reset link sent! Check your inbox.',
+                                style: TextStyle(
+                                  color: Colors.green.shade700,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(sheetCtx),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Back to Login',
+                            style: TextStyle(
+                              color: AppColors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,13 +235,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 12),
-              GestureDetector(
-                onTap: () => Navigator.maybePop(context),
-                child: const Icon(Icons.arrow_back_ios,
-                    size: 20, color: AppColors.bodyText),
-              ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 44),
               Center(
                 child: Column(
                   children: [
@@ -115,7 +278,10 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 10),
               Align(
                 alignment: Alignment.centerRight,
-                child: Text('Forgot Password?', style: AppTextStyles.linkBold),
+                child: GestureDetector(
+                  onTap: _showForgotPassword,
+                  child: Text('Forgot Password?', style: AppTextStyles.linkBold),
+                ),
               ),
               const SizedBox(height: 30),
               SizedBox(
@@ -123,11 +289,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 54,
                 child: ElevatedButton(
                   onPressed: _canLogin
-                      ? () => Navigator.pushReplacement(
+                      ? () {
+                          UserSession.instance
+                              .setFromEmail(_emailController.text.trim());
+                          Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
                                 builder: (_) => const MainShell()),
-                          )
+                          );
+                        }
                       : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,

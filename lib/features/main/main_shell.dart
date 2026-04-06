@@ -95,8 +95,8 @@ class _BottomNavBar extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          width: 52,
-                          height: 52,
+                          width: 46,
+                          height: 46,
                           decoration: BoxDecoration(
                             color: theme.navCenterBg,
                             shape: BoxShape.circle,
