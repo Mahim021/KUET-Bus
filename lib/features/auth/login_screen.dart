@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
-import '../../../core/services/user_session.dart';
+import '../../core/services/firestore_service.dart';
+import '../../core/services/user_session.dart';
 import '../main/main_shell.dart';
 import 'widgets/auth_field.dart';
 import 'signup_screen.dart';
@@ -18,6 +20,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _firestore = FirestoreService();
+  bool _isSubmitting = false;
 
   bool get _isEmailValid =>
       _emailController.text.trim().contains('@') &&
@@ -29,26 +33,61 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
 
+  Future<void> _bootstrapProfile(User user) async {
+    // Force token refresh so Firestore auth is ready before any reads/writes.
+    await user.getIdToken(true);
+    await _firestore.ensureStudentProfile(user);
+  }
+
+  void _navigateToHome(NavigatorState navigator) {
+    navigator.pushReplacement(
+      MaterialPageRoute(builder: (_) => const MainShell()),
+    );
+  }
+
   Future<void> _signInWithGoogle() async {
+    if (_isSubmitting) {
+      return;
+    }
+    setState(() => _isSubmitting = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     try {
-      await _googleSignIn.signOut(); // clear cached account so picker always shows all accounts
+      await _googleSignIn
+          .signOut(); // clear cached account so picker always shows all accounts
       final account = await _googleSignIn.signIn();
-      if (account != null && mounted) {
-        UserSession.instance.setFromGoogle(
-          name: account.displayName ?? account.email.split('@').first,
-          email: account.email,
-          photoUrl: account.photoUrl,
+      if (account != null) {
+        final auth = await account.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: auth.accessToken,
+          idToken: auth.idToken,
         );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainShell()),
-        );
+        final result =
+            await FirebaseAuth.instance.signInWithCredential(credential);
+        final user = result.user;
+        if (user != null) {
+          UserSession.instance.setFromGoogle(
+            name: user.displayName ?? account.displayName ?? '',
+            email: user.email ?? account.email,
+            photoUrl: user.photoURL ?? account.photoUrl?.toString(),
+          );
+          try {
+            await _bootstrapProfile(user);
+          } catch (_) {
+            // Profile bootstrap failure should not block login
+          }
+        }
+        _navigateToHome(navigator);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(content: Text('Sign-in failed: $e')),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
       }
     }
   }
@@ -289,14 +328,51 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 54,
                 child: ElevatedButton(
                   onPressed: _canLogin
-                      ? () {
-                          UserSession.instance
-                              .setFromEmail(_emailController.text.trim());
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const MainShell()),
-                          );
+                      ? () async {
+                          if (_isSubmitting) {
+                            return;
+                          }
+                          setState(() => _isSubmitting = true);
+                          final messenger = ScaffoldMessenger.of(context);
+                          final navigator = Navigator.of(context);
+                          final email = _emailController.text.trim();
+                          final password = _passwordController.text;
+                          try {
+                            final cred = await FirebaseAuth.instance
+                                .signInWithEmailAndPassword(
+                              email: email,
+                              password: password,
+                            );
+                            final user = cred.user;
+                            if (user != null) {
+                              UserSession.instance.setFromEmail(email);
+                              try {
+                                await _bootstrapProfile(user);
+                              } catch (_) {
+                                // Profile bootstrap failure should not block login
+                              }
+                              _navigateToHome(navigator);
+                            }
+                          } on FirebaseAuthException catch (e) {
+                            if (!mounted) {
+                              return;
+                            }
+                            messenger.showSnackBar(
+                              SnackBar(
+                                  content: Text(e.message ?? 'Login failed')),
+                            );
+                          } catch (e) {
+                            if (!mounted) {
+                              return;
+                            }
+                            messenger.showSnackBar(
+                              SnackBar(content: Text('Login failed: $e')),
+                            );
+                          } finally {
+                            if (mounted) {
+                              setState(() => _isSubmitting = false);
+                            }
+                          }
                         }
                       : null,
                   style: ElevatedButton.styleFrom(
@@ -307,11 +383,21 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(16)),
                     elevation: 0,
                   ),
-                  child: const Text('Log In',
-                      style: TextStyle(
-                          color: AppColors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700)),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(AppColors.white),
+                          ),
+                        )
+                      : const Text('Log In',
+                          style: TextStyle(
+                              color: AppColors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700)),
                 ),
               ),
               const SizedBox(height: 28),
@@ -331,7 +417,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: double.infinity,
                 height: 54,
                 child: OutlinedButton(
-                  onPressed: _signInWithGoogle,
+                  onPressed: _isSubmitting ? null : _signInWithGoogle,
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.divider),
                     shape: RoundedRectangleBorder(

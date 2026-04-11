@@ -43,3 +43,16 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase service account key (keep out of VCS)
+kuet-bus-firebase-adminsdk-*.json
+serviceAccountKey.json
+
+# Node dependencies used by tooling scripts
+/node_modules/
+
+# Firebase Android app config
+/android/app/google-services.json
+
+# OpenAI / API keys — never commit real keys
+lib/core/constants/api_constants.dart

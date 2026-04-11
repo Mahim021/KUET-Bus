@@ -1,0 +1,25 @@
+{
+  "name": "kuet-bus-functions",
+  "description": "Firebase Cloud Functions for KUET Bus — Gmail watch, AI schedule extraction, FCM notifications",
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^4.9.0",
+    "googleapis": "^140.0.0",
+    "openai": "^4.47.0",
+    "pdf-parse": "^1.1.1",
+    "axios": "^1.7.0"
+  },
+  "devDependencies": {
+    "firebase-functions-test": "^3.1.0"
+  },
+  "private": true
+}

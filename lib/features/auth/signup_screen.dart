@@ -57,6 +57,7 @@ class _SignupScreenState extends State<SignupScreen> {
         builder: (_) => ProfileReviewScreen(
           name: _nameController.text.trim(),
           email: _emailController.text.trim(),
+          password: _passwordController.text,
         ),
       ),
     );
@@ -182,8 +183,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               : AppColors.checkboxBorder,
                           width: 2,
                         ),
-                        color:
-                            _agreed ? AppColors.primary : Colors.transparent,
+                        color: _agreed ? AppColors.primary : Colors.transparent,
                       ),
                       child: _agreed
                           ? const Icon(Icons.check,
@@ -260,8 +260,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         TextSpan(
                             text: 'Already have an account? ',
                             style: AppTextStyles.bodySmall),
-                        TextSpan(
-                            text: 'Log In', style: AppTextStyles.linkBold),
+                        TextSpan(text: 'Log In', style: AppTextStyles.linkBold),
                       ],
                     ),
                   ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../core/services/firestore_service.dart';
+import '../../models/notice.dart';
 
 class NoticesScreen extends StatefulWidget {
   const NoticesScreen({super.key});
@@ -25,63 +27,7 @@ class _NoticesScreenState extends State<NoticesScreen>
     super.dispose();
   }
 
-  final _notices = [
-    _NoticeItem(
-      tag: 'ALERT',
-      tagColor: Color(0xFFE53935),
-      tagBg: Color(0xFFFEF2F2),
-      title: 'Route A Delay',
-      body:
-          'Bus is currently 10 mins behind schedule due to heavy traffic at Fulbarigate intersection.',
-      time: '2 min ago',
-      icon: Icons.warning_amber_rounded,
-      iconColor: Color(0xFFE53935),
-    ),
-    _NoticeItem(
-      tag: 'EVENT',
-      tagColor: Color(0xFF1565C0),
-      tagBg: Color(0xFFEFF6FF),
-      title: 'Holiday Schedule',
-      body:
-          'Special vehicle arrangement starting from 8:00 AM on national holiday. All routes will operate.',
-      time: '1 hr ago',
-      icon: Icons.event_rounded,
-      iconColor: Color(0xFF1565C0),
-    ),
-    _NoticeItem(
-      tag: 'INFO',
-      tagColor: Color(0xFF059669),
-      tagBg: Color(0xFFECFDF5),
-      title: 'New Route Added',
-      body:
-          'Route C now covers Boyra junction starting from next Monday. Check schedule for details.',
-      time: '3 hr ago',
-      icon: Icons.info_outline_rounded,
-      iconColor: Color(0xFF059669),
-    ),
-    _NoticeItem(
-      tag: 'ALERT',
-      tagColor: Color(0xFFE53935),
-      tagBg: Color(0xFFFEF2F2),
-      title: 'Bus No. 5 Cancelled',
-      body:
-          'Due to maintenance, Bus No. 5 (Padma) is cancelled today. Alternate arrangements via Bus No. 3.',
-      time: '5 hr ago',
-      icon: Icons.cancel_rounded,
-      iconColor: Color(0xFFE53935),
-    ),
-    _NoticeItem(
-      tag: 'INFO',
-      tagColor: Color(0xFF059669),
-      tagBg: Color(0xFFECFDF5),
-      title: 'Pick-up Point Moved',
-      body:
-          'The Fulbarigate pick-up point has been temporarily relocated 200m ahead due to road construction.',
-      time: 'Yesterday',
-      icon: Icons.location_on_rounded,
-      iconColor: Color(0xFF059669),
-    ),
-  ];
+  final _firestore = FirestoreService();
 
   @override
   Widget build(BuildContext context) {
@@ -161,25 +107,108 @@ class _NoticesScreenState extends State<NoticesScreen>
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _NoticeList(notices: _notices),
-                  _NoticeList(
-                      notices: _notices
-                          .where((n) => n.tag == 'ALERT')
-                          .toList()),
-                  _NoticeList(
-                      notices: _notices
-                          .where((n) => n.tag == 'EVENT')
-                          .toList()),
-                ],
+              child: StreamBuilder<List<Notice>>(
+                stream: _firestore.watchNotices(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Error loading notices: ${snapshot.error}',
+                        style: TextStyle(color: theme.subText),
+                      ),
+                    );
+                  }
+                  final data = snapshot.data ?? [];
+                  final items = data.map(_toNoticeItem).toList();
+                  final alerts = items.where((n) => n.tag == 'ALERT').toList();
+                  final events = items.where((n) => n.tag == 'EVENT').toList();
+                  return TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _NoticeList(notices: items),
+                      _NoticeList(notices: alerts),
+                      _NoticeList(notices: events),
+                    ],
+                  );
+                },
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  _NoticeItem _toNoticeItem(Notice notice) {
+    final tag = notice.tag.toUpperCase();
+    final tagColor = _tagColor(tag);
+    return _NoticeItem(
+      tag: tag,
+      tagColor: tagColor,
+      tagBg: _tagBackground(tag),
+      title: notice.title,
+      body: notice.body,
+      time: _formatTime(notice.createdAt ?? notice.updatedAt),
+      icon: _tagIcon(tag),
+      iconColor: tagColor,
+    );
+  }
+
+  Color _tagColor(String tag) {
+    switch (tag) {
+      case 'ALERT':
+        return const Color(0xFFE53935);
+      case 'EVENT':
+        return const Color(0xFF1565C0);
+      case 'INFO':
+      default:
+        return const Color(0xFF059669);
+    }
+  }
+
+  Color _tagBackground(String tag) {
+    switch (tag) {
+      case 'ALERT':
+        return const Color(0xFFFEF2F2);
+      case 'EVENT':
+        return const Color(0xFFEFF6FF);
+      case 'INFO':
+      default:
+        return const Color(0xFFECFDF5);
+    }
+  }
+
+  IconData _tagIcon(String tag) {
+    switch (tag) {
+      case 'ALERT':
+        return Icons.warning_amber_rounded;
+      case 'EVENT':
+        return Icons.event_rounded;
+      case 'INFO':
+      default:
+        return Icons.info_outline_rounded;
+    }
+  }
+
+  String _formatTime(DateTime? time) {
+    if (time == null) {
+      return 'Just now';
+    }
+    final now = DateTime.now();
+    final diff = now.difference(time);
+    if (diff.inMinutes < 1) {
+      return 'Just now';
+    }
+    if (diff.inMinutes < 60) {
+      return '${diff.inMinutes} min ago';
+    }
+    if (diff.inHours < 24) {
+      return '${diff.inHours} hr ago';
+    }
+    return '${diff.inDays} days ago';
   }
 }
 
@@ -219,9 +248,7 @@ class _NoticeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: theme.isDark
-            ? Border.all(color: theme.border)
-            : null,
+        border: theme.isDark ? Border.all(color: theme.border) : null,
         boxShadow: theme.isDark
             ? null
             : [
