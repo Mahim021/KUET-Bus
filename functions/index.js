@@ -16,8 +16,9 @@ const messaging   = getMessaging();
 
 // ── Env vars (set via .env in functions/ for local dev, or firebase functions:secrets:set for prod) ──
 const OPENAI_API_KEY  = process.env.OPENAI_API_KEY;
-const AUTHORITY_EMAIL = process.env.AUTHORITY_EMAIL  || 'transport@kuet.ac.bd';
-const GMAIL_USER      = process.env.GMAIL_USER       || 'me';
+const AUTHORITY_EMAIL = process.env.AUTHORITY_EMAIL  || 'atifeenz@gmail.com';
+const AUTHORITY_EMAIL_DOMAIN = process.env.AUTHORITY_EMAIL_DOMAIN || '';
+const GMAIL_USER      = process.env.GMAIL_USER       || 'kuetbus2026@gmail.com';
 const PUBSUB_TOPIC    = process.env.PUBSUB_TOPIC     || 'gmail-kuet-watch';
 
 // ── OpenAI client ─────────────────────────────────────────────────────────────
@@ -119,7 +120,8 @@ async function processEmail(gmail, messageId) {
 
   // ── Check sender ────────────────────────────────────────────────────────
   const fromHeader = headers.find(h => h.name.toLowerCase() === 'from')?.value || '';
-  if (!fromHeader.toLowerCase().includes(AUTHORITY_EMAIL.toLowerCase())) {
+  const senderEmail = extractEmailAddress(fromHeader);
+  if (!isAuthorizedSender(senderEmail)) {
     console.log(`Skipping email from: ${fromHeader}`);
     return;
   }
@@ -214,6 +216,34 @@ function extractTextBody(payload) {
     }
   }
   return '';
+}
+
+/** Extract the email address from a From header value. */
+function extractEmailAddress(fromHeader) {
+  if (!fromHeader) return '';
+
+  const angleMatch = fromHeader.match(/<([^>]+)>/);
+  if (angleMatch?.[1]) return angleMatch[1].trim().toLowerCase();
+
+  return fromHeader.trim().toLowerCase();
+}
+
+/** Allow exact authority email and optional domain-wide sender trust. */
+function isAuthorizedSender(senderEmail) {
+  if (!senderEmail) return false;
+
+  const normalizedAuthority = AUTHORITY_EMAIL.trim().toLowerCase();
+  const normalizedDomain = AUTHORITY_EMAIL_DOMAIN.trim().toLowerCase().replace(/^@/, '');
+
+  if (normalizedAuthority && senderEmail === normalizedAuthority) {
+    return true;
+  }
+
+  if (normalizedDomain && senderEmail.endsWith(`@${normalizedDomain}`)) {
+    return true;
+  }
+
+  return false;
 }
 
 /** Find the first PDF attachment and return its decoded Buffer, or null. */

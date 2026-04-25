@@ -4,6 +4,7 @@ class Bus {
   final String? id;
   final String busNumber;
   final String busName;
+  final bool hasGpsService;
   final String? driverId;
   final String? plateNumber;
   final DateTime? createdAt;
@@ -13,6 +14,7 @@ class Bus {
     this.id,
     required this.busNumber,
     required this.busName,
+    this.hasGpsService = false,
     this.driverId,
     this.plateNumber,
     this.createdAt,
@@ -24,6 +26,7 @@ class Bus {
       id: id,
       busNumber: json['busNumber'] as String? ?? '',
       busName: json['busName'] as String? ?? '',
+      hasGpsService: json['hasGpsService'] as bool? ?? false,
       driverId: json['driverId'] as String?,
       plateNumber: json['plateNumber'] as String?,
       createdAt: _asDateTime(json['createdAt']),
@@ -35,6 +38,7 @@ class Bus {
     return {
       'busNumber': busNumber,
       'busName': busName,
+      'hasGpsService': hasGpsService,
       'driverId': driverId,
       'plateNumber': plateNumber,
       'createdAt': createdAt,
