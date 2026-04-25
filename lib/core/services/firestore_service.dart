@@ -175,13 +175,88 @@ class FirestoreService {
   }
 
   Future<void> updateBusLocation(BusLocation location) {
-    return _busLocations
-        .doc(location.busId)
-        .set(location.toJson(), SetOptions(merge: true));
+    final busId = location.busId.trim();
+    if (busId.isEmpty) {
+      return Future.error(Exception('Bus ID is required'));
+    }
+
+    return _db.runTransaction((txn) async {
+      final busRef = _buses.doc(busId);
+      txn.set(
+        _busLocations.doc(busId),
+        location.toJson(),
+        SetOptions(merge: true),
+      );
+      txn.set(
+        busRef,
+        {
+          'hasGpsService': true,
+          'updatedAt': DateTime.now(),
+        },
+        SetOptions(merge: true),
+      );
+    });
   }
 
   Future<void> deleteBusLocation(String busId) {
     return _busLocations.doc(busId).delete();
+  }
+
+  Future<void> repairBusLocationDocuments() async {
+    final snapshot = await _busLocations.get();
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final parsed = BusLocation.fromJson(data, busId: doc.id);
+      final normalizedBusId = parsed.busId.trim();
+      if (normalizedBusId.isEmpty) {
+        continue;
+      }
+
+      final targetRef = _busLocations.doc(normalizedBusId);
+      if (doc.id == normalizedBusId) {
+        if (data['busId']?.toString().trim() != normalizedBusId) {
+          await targetRef.set(
+            {
+              ...data,
+              'busId': normalizedBusId,
+            },
+            SetOptions(merge: true),
+          );
+        }
+        continue;
+      }
+
+      await targetRef.set(
+        {
+          ...data,
+          'busId': normalizedBusId,
+        },
+        SetOptions(merge: true),
+      );
+      await doc.reference.delete();
+    }
+  }
+
+  Future<void> syncGpsServiceFlagsFromBusLocations() async {
+    final snapshot = await _busLocations.get();
+    final busIds = <String>{};
+    for (final doc in snapshot.docs) {
+      final location = BusLocation.fromJson(doc.data(), busId: doc.id);
+      final busId = location.busId.trim();
+      if (busId.isNotEmpty) {
+        busIds.add(busId);
+      }
+    }
+
+    for (final busId in busIds) {
+      await _buses.doc(busId).set(
+        {
+          'hasGpsService': true,
+          'updatedAt': DateTime.now(),
+        },
+        SetOptions(merge: true),
+      );
+    }
   }
 
   Future<DocumentReference<Map<String, dynamic>>> addNotice(Notice notice) {
@@ -207,9 +282,8 @@ class FirestoreService {
       return Future.error(Exception('Bus number is required'));
     }
 
-    final busRef = (bus.id == null || bus.id!.isEmpty)
-        ? _buses.doc()
-        : _buses.doc(bus.id);
+    final busRef =
+        (bus.id == null || bus.id!.isEmpty) ? _buses.doc() : _buses.doc(bus.id);
 
     final busData = bus.toJson()
       ..['busNumberKey'] = numberKey
@@ -238,9 +312,7 @@ class FirestoreService {
         });
       }
 
-      if (oldKey != null &&
-          oldKey.isNotEmpty &&
-          oldKey != numberKey) {
+      if (oldKey != null && oldKey.isNotEmpty && oldKey != numberKey) {
         final oldIndexRef = _uniqueBusNumbers.doc(oldKey);
         final oldIndexSnap = await txn.get(oldIndexRef);
         final claimed = oldIndexSnap.data()?['busId']?.toString();
@@ -307,9 +379,7 @@ class FirestoreService {
         });
       }
 
-      if (oldKey != null &&
-          oldKey.isNotEmpty &&
-          oldKey != nameKey) {
+      if (oldKey != null && oldKey.isNotEmpty && oldKey != nameKey) {
         final oldIndexRef = _uniqueRouteNames.doc(oldKey);
         final oldIndexSnap = await txn.get(oldIndexRef);
         final claimed = oldIndexSnap.data()?['routeId']?.toString();
@@ -381,8 +451,7 @@ class FirestoreService {
   }
 
   /// Write an AI-extracted schedule to the pending collection.
-  Future<void> writePendingSchedule(
-      String date, Map<String, dynamic> data) {
+  Future<void> writePendingSchedule(String date, Map<String, dynamic> data) {
     return _pendingSchedules.doc(date).set(data, SetOptions(merge: true));
   }
 
