@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KUET Bus – Project Report</title>
+<style>
+  /* ── Reset & Base ──────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --maroon:   #3B0D0D;
+    --maroon2:  #5a1414;
+    --rose:     #E07B7B;
+    --bg:       #fafafa;
+    --surface:  #ffffff;
+    --text:     #1c1c1c;
+    --sub:      #555;
+    --border:   #e0e0e0;
+    --alert:    #c62828;
+    --blue:     #1565C0;
+    --green:    #1b5e20;
+  }
+
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 11pt;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  /* ── Page layout ───────────────────────────────────────── */
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    background: var(--surface);
+    padding: 20mm 22mm 20mm 22mm;
+  }
+
+  @media print {
+    body { background: white; }
+    .page {
+      width: 100%;
+      margin: 0;
+      padding: 15mm 20mm;
+      page-break-after: always;
+    }
+    .no-break { page-break-inside: avoid; }
+    h2 { page-break-before: auto; }
+  }
+
+  /* ── Cover Page ────────────────────────────────────────── */
+  .cover {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 257mm;
+    text-align: center;
+    border: 3px solid var(--maroon);
+    border-radius: 4px;
+    padding: 40px;
+    position: relative;
+    background: linear-gradient(160deg, #fff 60%, #f9eded 100%);
+  }
+
+  .cover-stripe {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 10px;
+    background: var(--maroon);
+    border-radius: 2px 2px 0 0;
+  }
+  .cover-stripe-bottom {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 10px;
+    background: var(--maroon);
+    border-radius: 0 0 2px 2px;
+  }
+
+  .cover-logo {
+    width: 110px;
+    height: 110px;
+    border-radius: 24px;
+    margin-bottom: 28px;
+    box-shadow: 0 8px 32px rgba(59,13,13,0.25);
+    object-fit: cover;
+  }
+
+  .cover-badge {
+    font-family: 'Arial', sans-serif;
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--maroon);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .cover h1 {
+    font-size: 26pt;
+    font-weight: 700;
+    color: var(--maroon);
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+
+  .cover-subtitle {
+    font-size: 12pt;
+    color: var(--sub);
+    font-style: italic;
+    margin-bottom: 36px;
+  }
+
+  .cover-divider {
+    width: 80px;
+    height: 3px;
+    background: var(--maroon);
+    margin: 0 auto 36px;
+    border-radius: 2px;
+  }
+
+  .cover-meta {
+    width: 100%;
+    max-width: 420px;
+    border-collapse: collapse;
+    font-family: 'Arial', sans-serif;
+    font-size: 10pt;
+  }
+  .cover-meta td {
+    padding: 6px 12px;
+    border-bottom: 1px solid #f0dede;
+  }
+  .cover-meta td:first-child {
+    font-weight: 700;
+    color: var(--maroon);
+    text-align: right;
+    width: 45%;
+  }
+  .cover-meta td:last-child {
+    text-align: left;
+    color: var(--text);
+  }
+
+  .cover-footer {
+    margin-top: 40px;
+    font-family: 'Arial', sans-serif;
+    font-size: 9pt;
+    color: var(--sub);
+    line-height: 1.6;
+  }
+
+  /* ── Header strip (appears on pages after cover) ────────── */
+  .page-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--maroon);
+    margin-bottom: 28px;
+  }
+  .page-header img {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+  .page-header-text {
+    font-family: 'Arial', sans-serif;
+    font-size: 9pt;
+    color: var(--sub);
+    letter-spacing: 0.5px;
+  }
+  .page-header-text strong {
+    display: block;
+    color: var(--maroon);
+    font-size: 10pt;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ── Typography ────────────────────────────────────────── */
+  h2 {
+    font-family: 'Arial', sans-serif;
+    font-size: 14pt;
+    font-weight: 700;
+    color: var(--maroon);
+    margin: 32px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--maroon);
+    letter-spacing: 0.3px;
+  }
+
+  h3 {
+    font-family: 'Arial', sans-serif;
+    font-size: 11.5pt;
+    font-weight: 700;
+    color: var(--maroon2);
+    margin: 22px 0 8px;
+  }
+
+  h4 {
+    font-family: 'Arial', sans-serif;
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: var(--text);
+    margin: 16px 0 6px;
+  }
+
+  p { margin-bottom: 10px; }
+
+  ul, ol {
+    padding-left: 22px;
+    margin-bottom: 10px;
+  }
+  li { margin-bottom: 4px; }
+
+  strong { color: var(--maroon2); }
+
+  /* ── Abstract box ──────────────────────────────────────── */
+  .abstract-box {
+    background: #fdf5f5;
+    border-left: 4px solid var(--maroon);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 16px;
+    font-style: italic;
+  }
+
+  /* ── Tables ────────────────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-family: 'Arial', sans-serif;
+    font-size: 9.5pt;
+  }
+  th {
+    background: var(--maroon);
+    color: white;
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  td {
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #fdf5f5; }
+  tr:last-child td { border-bottom: 2px solid var(--maroon); }
+
+  /* ── Code blocks ───────────────────────────────────────── */
+  pre {
+    background: #f7f0f0;
+    border: 1px solid #e8d5d5;
+    border-left: 4px solid var(--maroon);
+    border-radius: 0 6px 6px 0;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 8.5pt;
+    line-height: 1.6;
+    margin: 12px 0;
+    color: #2c0808;
+  }
+
+  /* ── Feature cards ─────────────────────────────────────── */
+  .feature-card {
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--maroon);
+    border-radius: 0 0 8px 8px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    background: #fff;
+  }
+  .feature-card h3 {
+    margin-top: 0;
+    font-size: 11pt;
+  }
+
+  /* ── TOC ───────────────────────────────────────────────── */
+  .toc {
+    background: #fdf5f5;
+    border: 1px solid #f0dede;
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 12px;
+  }
+  .toc-title {
+    font-family: 'Arial', sans-serif;
+    font-size: 11pt;
+    font-weight: 700;
+    color: var(--maroon);
+    margin-bottom: 14px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin-bottom: 5px; font-family: 'Arial', sans-serif; font-size: 10pt; }
+  .toc a { color: var(--maroon); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .toc .toc-sub { font-size: 9pt; color: var(--sub); margin-top: 3px; padding-left: 16px; }
+
+  /* ── Architecture diagram ──────────────────────────────── */
+  .arch-box {
+    background: #1c0808;
+    color: #f0d0d0;
+    font-family: 'Courier New', monospace;
+    font-size: 8pt;
+    line-height: 1.7;
+    padding: 16px 20px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 14px 0;
+  }
+
+  /* ── Callout ───────────────────────────────────────────── */
+  .callout {
+    background: #fff8e1;
+    border-left: 4px solid #f9a825;
+    padding: 10px 16px;
+    border-radius: 0 6px 6px 0;
+    font-family: 'Arial', sans-serif;
+    font-size: 9.5pt;
+    margin: 14px 0;
+    color: #5d4037;
+  }
+
+  /* ── Footer ────────────────────────────────────────────── */
+  .report-footer {
+    margin-top: 60px;
+    padding-top: 14px;
+    border-top: 2px solid var(--maroon);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'Arial', sans-serif;
+    font-size: 8.5pt;
+    color: var(--sub);
+  }
+  .report-footer img {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    object-fit: cover;
+  }
+
+  /* ── Tag pills ─────────────────────────────────────────── */
+  .pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 8pt;
+    font-family: 'Arial', sans-serif;
+    font-weight: 700;
+    margin: 2px 3px;
+  }
+  .pill-red   { background: #ffebee; color: var(--alert); border: 1px solid #ef9a9a; }
+  .pill-blue  { background: #e3f2fd; color: var(--blue);  border: 1px solid #90caf9; }
+  .pill-green { background: #e8f5e9; color: var(--green); border: 1px solid #a5d6a7; }
+  .pill-maroon{ background: #fdf5f5; color: var(--maroon);border: 1px solid #e0b3b3; }
+
+  /* ── Section number badge ──────────────────────────────── */
+  .sec-num {
+    display: inline-block;
+    background: var(--maroon);
+    color: white;
+    font-family: 'Arial', sans-serif;
+    font-size: 8pt;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════
+     COVER PAGE
+     ════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="cover">
+    <div class="cover-stripe"></div>
+    <div class="cover-stripe-bottom"></div>
+
+    <img class="cover-logo"
+         src="../android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png"
+         alt="KUET Bus Logo" />
+
+    <div class="cover-badge">Project Report · 2025–2026</div>
+    <h1>KUET Bus</h1>
+    <div class="cover-subtitle">Smart Campus Bus Tracking &amp; Management System</div>
+    <div class="cover-divider"></div>
+
+    <table class="cover-meta">
+      <tr><td>Developer</td><td>Md. Aiful Alam Mahim</td></tr>
+      <tr><td>Institution</td><td>Khulna University of Engineering &amp; Technology (KUET)</td></tr>
+      <tr><td>Department</td><td>Computer Science &amp; Engineering</td></tr>
+      <tr><td>Platform</td><td>Android · Flutter (Cross-platform)</td></tr>
+      <tr><td>Academic Year</td><td>2025 – 2026</td></tr>
+      <tr><td>Submission Date</td><td>April 2026</td></tr>
+    </table>
+
+    <div class="cover-footer">
+      Khulna University of Engineering &amp; Technology<br/>
+      Khulna – 9203, Bangladesh
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     TABLE OF CONTENTS
+     ════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="logo" />
+    <div class="page-header-text">
+      <strong>KUET Bus</strong>
+      Smart Campus Bus Tracking &amp; Management System
+    </div>
+  </div>
+
+  <h2>Table of Contents</h2>
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#abstract">Abstract</a></li>
+      <li><a href="#introduction">Introduction</a>
+        <div class="toc-sub">2.1 Background &nbsp;·&nbsp; 2.2 Problem Statement &nbsp;·&nbsp; 2.3 Objectives &nbsp;·&nbsp; 2.4 Scope</div>
+      </li>
+      <li><a href="#overview">System Overview</a>
+        <div class="toc-sub">Target Users &nbsp;·&nbsp; Technology Stack</div>
+      </li>
+      <li><a href="#features">Features &amp; Functionality</a>
+        <div class="toc-sub">
+          A. Authentication &nbsp;·&nbsp; B. User Profile &nbsp;·&nbsp; C. Live Bus Tracking &nbsp;·&nbsp;
+          D. A* Pathfinding &nbsp;·&nbsp; E. Bus Schedule &nbsp;·&nbsp; F. Notices &nbsp;·&nbsp;
+          G. AI Chatbot &nbsp;·&nbsp; H. Push Notifications &nbsp;·&nbsp; I. Preferences &nbsp;·&nbsp;
+          J. Admin Dashboard &nbsp;·&nbsp; K. Weather &nbsp;·&nbsp; L. Home Dashboard
+        </div>
+      </li>
+      <li><a href="#architecture">Technical Architecture</a></li>
+      <li><a href="#models">Data Models</a></li>
+      <li><a href="#security">Security &amp; Access Control</a></li>
+      <li><a href="#uiux">UI/UX Design</a></li>
+      <li><a href="#challenges">Challenges &amp; Solutions</a></li>
+      <li><a href="#future">Future Enhancements</a></li>
+      <li><a href="#conclusion">Conclusion</a></li>
+      <li><a href="#references">References &amp; Technologies Used</a></li>
+    </ol>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     ABSTRACT
+     ════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="logo" />
+    <div class="page-header-text">
+      <strong>KUET Bus</strong>
+      Smart Campus Bus Tracking &amp; Management System
+    </div>
+  </div>
+
+  <h2 id="abstract"><span class="sec-num">1</span>Abstract</h2>
+  <div class="abstract-box">
+    <p>
+      Campus transportation at Khulna University of Engineering &amp; Technology (KUET) has historically
+      relied on physical notice boards and word-of-mouth for bus schedule dissemination, with no real-time
+      information available to students or staff. <strong>KUET Bus</strong> is a mobile application developed
+      for Android using the Flutter framework that digitizes and modernizes the entire campus transport ecosystem.
+    </p>
+    <p>
+      The system enables real-time bus location tracking on an interactive map, dynamic schedule browsing,
+      role-based administration, and instant push notifications for schedule changes. It incorporates an
+      AI-powered chatbot that answers natural-language queries about routes and timings, an A* pathfinding
+      algorithm for visualizing optimal routes on the Khulna city road network, and a fully personalized
+      user profile system with photo upload. Administrators are equipped with a dedicated dashboard to manage
+      buses, routes, schedules, and notices — including AI-assisted schedule extraction.
+    </p>
+    <p>
+      The application is built on a robust Firebase backend for real-time data synchronization,
+      authentication, cloud storage, and push messaging. KUET Bus significantly reduces student
+      uncertainty around campus transport, improves administrative efficiency, and lays the digital
+      foundation for a smarter, data-driven campus mobility experience.
+    </p>
+  </div>
+
+  <!-- INTRODUCTION -->
+  <h2 id="introduction"><span class="sec-num">2</span>Introduction</h2>
+
+  <h3>2.1 Background</h3>
+  <p>
+    Khulna University of Engineering &amp; Technology is one of the premier public technical universities
+    in Bangladesh, with a large student body and faculty distributed across a sprawling campus. The university
+    operates a fleet of buses that ferry students and staff between campus and major city locations daily.
+    Despite the scale of this service, there has been no centralized digital platform for students to track
+    buses in real time, access reliable schedules, or receive timely notifications about changes — creating
+    daily friction and uncertainty for thousands of commuters.
+  </p>
+
+  <h3>2.2 Problem Statement</h3>
+  <p>The absence of a dedicated digital transport management system at KUET creates the following operational pain points:</p>
+  <ul>
+    <li><strong>No real-time bus visibility:</strong> Students have no way of knowing a bus's current location, estimated arrival, or whether it is running on time.</li>
+    <li><strong>Manual schedule distribution:</strong> Timetables are distributed through physical boards and informal messaging, leading to inconsistency and missed updates.</li>
+    <li><strong>No automated notifications:</strong> Changes during Ramadan, holidays, or maintenance are communicated reactively rather than proactively.</li>
+    <li><strong>No administrative control panel:</strong> Bus administrators lack a unified digital tool to manage fleet information, publish notices, and update schedules efficiently.</li>
+    <li><strong>No personalized student experience:</strong> There is no user-specific interface preventing targeted communication or preference settings.</li>
+  </ul>
+
+  <h3>2.3 Objectives</h3>
+  <ol>
+    <li>Develop a real-time bus tracking system using GPS and Firebase Firestore live streams.</li>
+    <li>Provide students with a reliable, browsable daily bus schedule interface.</li>
+    <li>Implement role-based access control separating student and administrator experiences.</li>
+    <li>Deliver push notifications for schedule updates using Firebase Cloud Messaging.</li>
+    <li>Integrate an AI chatbot capable of answering transport-related queries in natural language.</li>
+    <li>Build an administrator dashboard for complete fleet and schedule management.</li>
+    <li>Implement A* pathfinding on the Khulna city road network as a route visualization tool.</li>
+    <li>Create a personalized user profile system with photo upload and persistent preferences.</li>
+  </ol>
+
+  <h3>2.4 Scope</h3>
+  <p>
+    KUET Bus covers the full lifecycle of campus transport interaction — from student authentication and
+    profile management to real-time map tracking, schedule lookup, notice reading, and AI-assisted queries.
+    The admin module supports complete CRUD operations on all transport data. The application targets
+    Android devices (API level 21+) and is built with Flutter's cross-platform architecture, enabling
+    straightforward future extension to iOS.
+  </p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     SYSTEM OVERVIEW
+     ════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="logo" />
+    <div class="page-header-text">
+      <strong>KUET Bus</strong>
+      Smart Campus Bus Tracking &amp; Management System
+    </div>
+  </div>
+
+  <h2 id="overview"><span class="sec-num">3</span>System Overview</h2>
+
+  <p>
+    <strong>KUET Bus</strong> is a full-stack mobile application consisting of a Flutter-based Android
+    frontend and a Firebase cloud backend. It serves two distinct user roles — students and administrators —
+    through a shared navigation shell that adapts its tabs based on the authenticated user's role.
+  </p>
+
+  <h3>Target Users</h3>
+  <table>
+    <tr><th>User Role</th><th>Capabilities</th></tr>
+    <tr><td><strong>Student</strong></td><td>View schedules, track buses live, read notices, use AI chatbot, manage personal profile, set preferences</td></tr>
+    <tr><td><strong>Administrator</strong></td><td>All student capabilities + full CRUD on buses, routes, schedules, notices; AI schedule extraction; live location management</td></tr>
+  </table>
+
+  <h3>Technology Stack</h3>
+  <table>
+    <tr><th>Layer</th><th>Technology</th></tr>
+    <tr><td>Mobile Frontend</td><td>Flutter (Dart), Material Design 3</td></tr>
+    <tr><td>Authentication</td><td>Firebase Auth — Email/Password &amp; Google OAuth 2.0</td></tr>
+    <tr><td>Database</td><td>Cloud Firestore (real-time, NoSQL)</td></tr>
+    <tr><td>File Storage</td><td>Firebase Storage (profile images)</td></tr>
+    <tr><td>Push Notifications</td><td>Firebase Cloud Messaging (FCM) + flutter_local_notifications</td></tr>
+    <tr><td>Mapping</td><td>flutter_map + OpenStreetMap tile layer + latlong2</td></tr>
+    <tr><td>Pathfinding</td><td>Custom A* algorithm with Haversine distance heuristic</td></tr>
+    <tr><td>AI Chatbot</td><td>OpenAI API (GPT) via HTTP</td></tr>
+    <tr><td>Local Persistence</td><td>SharedPreferences</td></tr>
+    <tr><td>Device Services</td><td>geolocator (GPS), image_picker (gallery), permission_handler</td></tr>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     FEATURES
+     ════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="logo" />
+    <div class="page-header-text">
+      <strong>KUET Bus</strong>
+      Smart Campus Bus Tracking &amp; Management System
+    </div>
+  </div>
+
+  <h2 id="features"><span class="sec-num">4</span>Features &amp; Functionality</h2>
+
+  <!-- A -->
+  <div class="feature-card no-break">
+    <h3>A &nbsp;·&nbsp; Authentication &amp; User Management</h3>
+    <p>
+      The application opens to a splash screen that silently checks Firebase Auth state. Authenticated
+      users proceed directly to the main shell; others land on the Login screen.
+    </p>
+    <ul>
+      <li><strong>Email &amp; Password</strong> — standard Firebase authentication flow with signup and login screens.</li>
+      <li><strong>Google Sign-In</strong> — one-tap OAuth 2.0 via <code>google_sign_in</code>; account created automatically on first sign-in.</li>
+      <li><strong>Profile Review Screen</strong> — pre-fills KUET ID (extracted via regex from email local part) and derived batch year for new users to confirm before account creation.</li>
+      <li><strong>Role-based access</strong> — a <code>role</code> field (<code>"student"</code> or <code>"admin"</code>) on the Firestore user document drives navigation and feature visibility app-wide.</li>
+    </ul>
+  </div>
+
+  <!-- B -->
+  <div class="feature-card no-break">
+    <h3>B &nbsp;·&nbsp; User Profile</h3>
+    <p>A rich, fully editable profile screen surfaces all personal and academic information.</p>
+    <ul>
+      <li><strong>Photo upload:</strong> Tapping the avatar opens the device gallery (<code>image_picker</code>). The image is compressed (512×512, 80% quality) and uploaded to Firebase Storage. The download URL is persisted to Firestore and rendered as a circular <code>NetworkImage</code>.</li>
+      <li><strong>Edit Profile sheet:</strong> A modal bottom sheet exposes editable fields — Full Name, Phone Number, Blood Group, Hometown — saved back to Firestore on confirmation.</li>
+      <li><strong>Read-only fields:</strong> Email, KUET ID, Department, and Batch (set at registration) are displayed but protected from modification.</li>
+      <li><strong>Real-time sync:</strong> Profile data is fetched from Firestore on screen load and refreshed immediately after any edit.</li>
+    </ul>
+    <table>
+      <tr><th>Field</th><th>Editable</th><th>Source</th></tr>
+      <tr><td>Name</td><td>Yes</td><td>Firestore</td></tr>
+      <tr><td>Phone, Blood Group, Hometown</td><td>Yes</td><td>Firestore</td></tr>
+      <tr><td>Profile Photo</td><td>Yes</td><td>Firebase Storage URL</td></tr>
+      <tr><td>Email, KUET ID, Dept., Batch</td><td>No</td><td>Firebase Auth / Firestore</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="page">
+  <div class="page-header">
+    <img src="../android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="logo" />
+    <div class="page-header-text">
+      <strong>KUET Bus</strong>
+      Smart Campus Bus Tracking &amp; Management System
+    </div>
+  </div>
+
+  <!-- C -->
+  <div class="feature-card no-break">
+    <h3>C &nbsp;·&nbsp; Live Bus Tracking</h3>
+    <p>An interactive OpenStreetMap-powered screen provides real-time bus visibility across the KUET–Khulna corridor.</p>
+    <ul>
+      <li><strong>Live bus marker:</strong> A maroon circular marker with a bus icon is positioned at coordinates streamed live from Firestore's <code>bus_locations</code> collection via a <code>StreamSubscription</code>.</li>
+      <li><strong>Campus destination pin:</strong> A fixed green school-icon marker at 22.9000°N, 89.5012°E marks the KUET campus.</li>
+      <li><strong>User GPS location:</strong> The blue <em>my_location</em> button invokes <code>Geolocator.getCurrentPosition()</code> after requesting <code>ACCESS_FINE_LOCATION</code>. A blue person-pin is placed at the user's coordinates and the camera moves there.</li>
+      <li><strong>Center on bus:</strong> A dedicated maroon <em>directions_bus</em> button always re-centers the map on the live bus, no matter how far the user has panned.</li>
+      <li><strong>Back navigation:</strong> A back arrow button appears automatically when the screen is accessed via a navigation push, preventing users from getting stranded on the map.</li>
+    </ul>
+  </div>
+
+  <!-- D -->
+  <div class="feature-card no-break">
+    <h3>D &nbsp;·&nbsp; A* Pathfinding &amp; Route Demo</h3>
+    <p>A switchable routing mode transforms the Live Map into an interactive shortest-path demonstration.</p>
+    <ul>
+      <li>The <strong>Khulna city road network</strong> is loaded from a local GeoJSON asset into an in-memory adjacency graph.</li>
+      <li><strong>Two-tap selection:</strong> first tap sets the start node (red "S" pin), second tap sets the destination (blue "D" pin) — both snapped to the nearest road node via Haversine distance.</li>
+      <li>The <strong>A* algorithm</strong> computes the shortest path synchronously; a green polyline is rendered on the map.</li>
+      <li>A <strong>status banner</strong> displays route distance (km/m), nodes explored, and elapsed computation time (ms).</li>
+      <li>A third tap resets the selection and starts a new route. <strong>Haptic feedback</strong> confirms each tap.</li>
+    </ul>
+  </div>
+
+  <!-- E -->
+  <div class="feature-card no-break">
+    <h3>E &nbsp;·&nbsp; Bus Schedule</h3>
+    <ul>
+      <li>Date picker for browsing timetables by any specific date.</li>
+      <li>Toggle between <strong>Normal</strong> and <strong>Ramadan</strong> schedule variants.</li>
+      <li>Active buses are visually emphasized; inactive services are dimmed.</li>
+      <li>Color-coded <strong>route legend</strong> for quick route identification.</li>
+      <li>Live Firestore stream — admin updates appear instantly without requiring a refresh.</li>
+    </ul>
+  </div>
+
+  <!-- F -->
+  <div class="feature-card no-break">
+    <h3>F &nbsp;·&nbsp; Notices &amp; Announcements</h3>
+    <ul>
+      <li>Real-time notice feed ordered by creation time, streamed from Firestore.</li>
+      <li>Three-tab filter: <span class="pill pill-maroon">All</span> <span class="pill pill-red">Alerts</span> <span class="pill pill-blue">Events</span></li>
+      <li>Notice cards show title, body excerpt, tag, and relative timestamp.</li>
+      <li>Latest three notices appear in a scrollable carousel on the Home dashboard.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="page">
+  <div class="page-header">
+    <img src="../android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="logo" />
+    <div class="page-header-text">
+      <strong>KUET Bus</strong>
+      Smart Campus Bus Tracking &amp; Management System
+    </div>
+  </div>
+
+  <!-- G -->
+  <div class="feature-card no-break">
+    <h3>G &nbsp;·&nbsp; AI Chatbot Assistant</h3>
+    <p>A floating chatbot widget powered by the OpenAI API provides a natural-language transport assistant.</p>
+    <ul>
+      <li>Before responding, the chatbot fetches the <strong>current day's live schedule</strong> from Firestore as context, grounding answers in real data.</li>
+      <li>Handles queries such as: <em>"What time does the next bus to campus leave?"</em>, <em>"Is there a Boyra route bus today?"</em>, <em>"What is the Ramadan schedule?"</em></li>
+      <li>The widget floats above all screens and can be expanded or dismissed without interrupting navigation.</li>
+    </ul>
+  </div>
+
+  <!-- H -->
+  <div class="feature-card no-break">
+    <h3>H &nbsp;·&nbsp; Push Notifications (FCM)</h3>
+    <p>End-to-end push notification pipeline for schedule update alerts:</p>
+    <ol>
+      <li>Admin posts a schedule change or AI extraction is submitted.</li>
+      <li>Firebase Cloud Messaging delivers a push to all registered student devices.</li>
+      <li><code>flutter_local_notifications</code> displays the notification in the system tray.</li>
+      <li>Tapping the notification deep-links to the <strong>Pending Schedule Screen</strong> for the relevant date.</li>
+    </ol>
+    <p>A global <code>navigatorKey</code> in <code>app.dart</code> enables correct deep-link routing even when the app is launched cold from a notification tap.</p>
+  </div>
+
+  <!-- I -->
+  <div class="feature-card no-break">
+    <h3>I &nbsp;·&nbsp; User Preferences (Persistent)</h3>
+    <table>
+      <tr><th>Preference</th><th>Storage</th><th>Default</th></tr>
+      <tr><td>Dark Mode</td><td>AppThemeNotifier (in-memory)</td><td>Off</td></tr>
+      <tr><td>Push Notifications</td><td>SharedPreferences key <code>push_notifications</code></td><td>On</td></tr>
+      <tr><td>Departure Reminders</td><td>SharedPreferences key <code>departure_reminders</code></td><td>On</td></tr>
+      <tr><td>Vibration Alerts</td><td>SharedPreferences key <code>vibration_alerts</code></td><td>Off</td></tr>
+    </table>
+    <p>All preferences are loaded during <code>initState</code> and written back on every toggle, surviving app restarts.</p>
+  </div>
+
+  <!-- J -->
+  <div class="feature-card no-break">
+    <h3>J &nbsp;·&nbsp; Admin Dashboard</h3>
+    <p>Administrators receive a dedicated tab (replacing Live Map) with full fleet management capability.</p>
+    <table>
+      <tr><th>Module</th><th>Operations</th></tr>
+      <tr><td><strong>Buses</strong></td><td>Add, edit, delete; unique bus number enforced via Firestore transactions</td></tr>
+      <tr><td><strong>Routes</strong></td><td>Add, edit, delete; unique route name enforced via index collection</td></tr>
+      <tr><td><strong>Schedules</strong></td><td>Create and delete timetable entries</td></tr>
+      <tr><td><strong>Notices</strong></td><td>Post alert and event notices to all students</td></tr>
+      <tr><td><strong>AI Schedule Extraction</strong></td><td>Paste notice text → AI extracts structured schedule data</td></tr>
+      <tr><td><strong>Pending Approval</strong></td><td>Review AI-extracted schedules; approve (promotes to live) or reject</td></tr>
+      <tr><td><strong>Bus Locations</strong></td><td>Manually update or delete live bus GPS coordinates</td></tr>
+    </table>
+  </div>
+
+  <!-- K & L -->
+  <div class="feature-card no-break">
+    <h3>K &nbsp;·&nbsp; Weather Integration</h3>
+    <p>
+      The Home dashboard fetches live weather data via HTTP from a weather API, displaying current
+      temperature, conditions, and a contextual icon relevant to the KUET campus area.
+      This helps students decide whether to take the bus based on current conditions.
+    </p>
+  </div>
+
+  <div class="feature-card no-break">
+    <h3>L &nbsp;·&nbsp; Home Dashboard</h3>
+    <p>The landing screen aggregates key information: personalized welcome banner with the user's name,
+    live weather widget, a horizontal carousel of the latest three notices, and quick-action shortcuts
+    to Live Map, Schedule, and Notices. Admin users see additional shortcuts to the Admin Dashboard.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     ARCHITECTURE
+     ════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="logo" />
+    <div class="page-header-text">
+      <strong>KUET Bus</strong>
+      Smart Campus Bus Tracking &amp; Management System
+    </div>
+  </div>
+
+  <h2 id="architecture"><span class="sec-num">5</span>Technical Architecture</h2>
+
+  <div class="arch-box">
+┌─────────────────────────────────────────────────────────────────────┐
+│                       KUET Bus Flutter App                           │
+│                                                                      │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────┐  │
+│  │  Auth    │  │  Home    │  │ Live Map │  │ Schedule │  │Notice│  │
+│  │  Screen  │  │Dashboard │  │  + A*    │  │ Browser  │  │ Feed │  │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘  └──┬───┘  │
+│       └─────────────┴─────────────┴──────────────┴───────────┘      │
+│                              │                                       │
+│           ┌──────────────────┴──────────────────────┐               │
+│           │    Main Shell (IndexedStack Navigation)  │               │
+│           └──────────────────┬──────────────────────┘               │
+│                              │                                       │
+│  ┌───────────────────────────┴──────────────────────────────────┐   │
+│  │                       Service Layer                           │   │
+│  │  FirestoreService · AuthRoleService · UserSession             │   │
+│  │  WeatherService · ChatbotService · OpenAIService              │   │
+│  └───────────────────────────┬──────────────────────────────────┘   │
+└──────────────────────────────┼──────────────────────────────────────┘
+                               │
+          ┌────────────────────┼──────────────────────┐
+          │                    │                       │
+   ┌──────▼──────┐    ┌────────▼────────┐    ┌────────▼──────┐
+   │  Firebase   │    │  OpenStreetMap  │    │  OpenAI API   │
+   │  Firestore  │    │  flutter_map    │    │  (Chatbot +   │
+   │  Auth       │    │  Geolocator     │    │  Schedule AI) │
+   │  Storage    │    │  (Device GPS)   │    │               │
+   │  Messaging  │    │                 │    │               │
+   └─────────────┘    └─────────────────┘    └───────────────┘
+  </div>
+
+  <h3>Navigation Architecture</h3>
+  <ul>
+    <li><code>IndexedStack</code> with 5 tabs preserves full screen state across tab switches — no rebuilds when switching.</li>
+    <li><code>AppThemeScope</code> (<code>InheritedNotifier&lt;AppThemeNotifier&gt;</code>) propagates the dark/light theme to every widget in the tree without manual passing.</li>
+    <li>A global <code>navigatorKey</code> in <code>app.dart</code> enables deep-link routing from FCM background notification taps, even when the app is cold-launched.</li>
+    <li>Admin users receive a 5th "Admin Dashboard" tab injected at index 2, replacing the Live Map tab available to students.</li>
+  </ul>
+
+  <!-- DATA MODELS -->
+  <h2 id="models"><span class="sec-num">6</span>Data Models</h2>
+
+  <h3>Student Document</h3>
+  <pre>Student {
+  uid:          String    // Firebase Auth UID (Firestore doc ID)
+  name:         String
+  email:        String
+  kuetId:       String    // e.g. "1903077"
+  department:   String
+  batch:        String    // e.g. "2019"
+  role:         String    // "student" | "admin"
+  bloodGroup:   String?
+  hometown:     String?
+  phoneNumber:  String?
+  photoUrl:     String?   // Firebase Storage download URL
+  photoPath:    String?   // Storage path for re-upload / deletion
+  createdAt:    Timestamp?
+  updatedAt:    Timestamp?
+}</pre>
+
+  <h3>Firestore Collections</h3>
+  <table>
+    <tr><th>Collection</th><th>Key Fields</th><th>Description</th></tr>
+    <tr><td><code>users</code></td><td>uid, name, email, kuetId, role</td><td>Student &amp; admin profiles</td></tr>
+    <tr><td><code>buses</code></td><td>busNumber, busNumberKey</td><td>Bus fleet records</td></tr>
+    <tr><td><code>routes</code></td><td>routeName, routeNameKey</td><td>Route definitions</td></tr>
+    <tr><td><code>schedules</code></td><td>time, route, busNumber, remarks</td><td>Daily timetable entries</td></tr>
+    <tr><td><code>notices</code></td><td>title, body, tag, createdAt</td><td>Institutional announcements</td></tr>
+    <tr><td><code>bus_locations</code></td><td>busId, position {lat, lng}, timestamp</td><td>Live GPS coordinates</td></tr>
+    <tr><td><code>pending_schedules</code></td><td>date (YYYY-MM-DD), entries</td><td>AI-extracted, awaiting approval</td></tr>
+    <tr><td><code>live_schedules</code></td><td>date, entries, approvedAt</td><td>Admin-approved schedules</td></tr>
+    <tr><td><code>notifications</code></td><td>type, date, status, createdAt</td><td>FCM notification log</td></tr>
+    <tr><td><code>unique_bus_numbers</code></td><td>busId, busNumber</td><td>Uniqueness index</td></tr>
+    <tr><td><code>unique_route_names</code></td><td>routeId, routeName</td><td>Uniqueness index</td></tr>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     SECURITY / UI / CHALLENGES / FUTURE / CONCLUSION
+     ════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="logo" />
+    <div class="page-header-text">
+      <strong>KUET Bus</strong>
+      Smart Campus Bus Tracking &amp; Management System
+    </div>
+  </div>
+
+  <h2 id="security"><span class="sec-num">7</span>Security &amp; Access Control</h2>
+  <p>
+    Firebase Firestore Security Rules enforce role-based access at the database level, independent of
+    any client-side enforcement. Students may read shared collections (<code>buses</code>, <code>routes</code>,
+    <code>schedules</code>, <code>notices</code>, <code>bus_locations</code>) and their own <code>users</code>
+    document. Write access to all administrative collections is restricted to users whose Firestore
+    <code>role</code> field equals <code>"admin"</code>.
+  </p>
+  <table>
+    <tr><th>Mechanism</th><th>Purpose</th></tr>
+    <tr><td><code>user.getIdToken(true)</code> before reads</td><td>Forces token refresh — ensures security rules see a fresh authenticated context</td></tr>
+    <tr><td>Firestore transactions for bus/route upsert</td><td>Prevents race conditions; enforces uniqueness atomically across concurrent admin writes</td></tr>
+    <tr><td>Index collections (<code>unique_bus_numbers</code>, <code>unique_route_names</code>)</td><td>Database-level deduplication independent of client validation</td></tr>
+    <tr><td>Role check in <code>AuthRoleService</code></td><td>Prevents admin UI tabs from rendering for student-role users</td></tr>
+  </table>
+
+  <h2 id="uiux"><span class="sec-num">8</span>UI/UX Design</h2>
+
+  <h3>Color System</h3>
+  <table>
+    <tr><th>Role</th><th>Light Mode</th><th>Dark Mode</th></tr>
+    <tr><td>Primary / Brand</td><td>#3B0D0D (Deep Maroon)</td><td>#3B0D0D</td></tr>
+    <tr><td>Primary Accent</td><td>#3B0D0D</td><td>#E07B7B (Light Rose)</td></tr>
+    <tr><td>Background</td><td>#F3F4F6</td><td>#0D0606</td></tr>
+    <tr><td>Surface</td><td>#FFFFFF</td><td>#1A0A0A</td></tr>
+    <tr><td>Alert tag</td><td colspan="2">#E53935 (Red)</td></tr>
+    <tr><td>Event tag</td><td colspan="2">#1565C0 (Blue)</td></tr>
+  </table>
+
+  <h3>Key Design Decisions</h3>
+  <ul>
+    <li><strong>Bottom navigation:</strong> 5-tab bar with a raised circular center button for the Notices tab (highest-frequency action), styled with a maroon pill on active tabs.</li>
+    <li><strong>IndexedStack:</strong> Preserves scroll position and data for each tab independently — switching tabs does not trigger a rebuild or re-fetch.</li>
+    <li><strong>Theming:</strong> Custom <code>AppThemeNotifier</code> wrapped in <code>AppThemeScope</code> (<code>InheritedNotifier</code>) — any widget calls <code>AppThemeData.of(context)</code> for instant, consistent theming.</li>
+    <li><strong>Animations:</strong> Pulsing live-tracking dot (900ms scale loop), inline upload spinners, route stats banner transitions.</li>
+    <li><strong>Haptics:</strong> <code>HapticFeedback.selectionClick()</code> on map taps in A* mode.</li>
+  </ul>
+
+  <h2 id="challenges"><span class="sec-num">9</span>Challenges &amp; Solutions</h2>
+  <table>
+    <tr><th>Challenge</th><th>Solution</th></tr>
+    <tr><td>Real-time bus position with minimal latency</td><td>Firestore <code>StreamSubscription</code> on <code>bus_locations</code> — sub-second propagation</td></tr>
+    <tr><td>A* pathfinding on a mobile device</td><td>Road network GeoJSON loaded once from local assets into in-memory adjacency list; runs in milliseconds</td></tr>
+    <tr><td>Role-based UI with a shared navigation shell</td><td><code>IndexedStack</code> tab list built at build-time from <code>AuthRoleService</code> role; admin tab injected only for admins</td></tr>
+    <tr><td>Persistent preferences without full backend</td><td><code>SharedPreferences</code> key-value store with load on <code>initState</code> and write on every toggle</td></tr>
+    <tr><td>Profile photo hosting &amp; retrieval</td><td><code>image_picker</code> → compress → <code>firebase_storage</code> upload → URL stored in Firestore → <code>NetworkImage</code> render</td></tr>
+    <tr><td>Deep-link navigation from background FCM taps</td><td>Global <code>navigatorKey</code> in <code>app.dart</code>; <code>onMessageOpenedApp</code> handler pushes route from any app state</td></tr>
+    <tr><td>Preventing duplicate bus numbers / routes</td><td>Firestore transactions with dedicated index collections — atomicity guaranteed at database level</td></tr>
+  </table>
+
+  <h2 id="future"><span class="sec-num">10</span>Future Enhancements</h2>
+  <table>
+    <tr><th>Enhancement</th><th>Description</th></tr>
+    <tr><td>IoT GPS hardware on buses</td><td>Physical GPS trackers (e.g. SIM7600) push live coordinates directly to Firebase</td></tr>
+    <tr><td>Estimated Time of Arrival (ETA)</td><td>Calculate ETA using live speed + remaining route distance from A* graph</td></tr>
+    <tr><td>QR code boarding pass</td><td>Generate student ID QR codes for digital bus pass verification by drivers</td></tr>
+    <tr><td>Bus occupancy tracking</td><td>Seat-count sensor integration to show real-time available seats per bus</td></tr>
+    <tr><td>Bengali language support</td><td>Full i18n with Bengali and English toggle</td></tr>
+    <tr><td>Offline mode</td><td>Cache schedules and recent notices locally for no-internet use</td></tr>
+    <tr><td>iOS release</td><td>Flutter cross-platform architecture makes iOS deployment straightforward</td></tr>
+    <tr><td>Driver-side companion app</td><td>Dedicated interface for location broadcasting and route confirmation</td></tr>
+  </table>
+
+  <h2 id="conclusion"><span class="sec-num">11</span>Conclusion</h2>
+  <p>
+    KUET Bus successfully addresses a long-standing gap in campus transport management at Khulna University
+    of Engineering &amp; Technology. By combining real-time Firebase data synchronization, interactive
+    OpenStreetMap-based tracking, AI-assisted schedule management, and push notification delivery, the
+    application transforms a previously manual and fragmented experience into a cohesive, always-available
+    digital service.
+  </p>
+  <p>
+    The project demonstrates the viability of Flutter and Firebase as a full-stack mobile development
+    platform for production-quality institutional applications. The integration of the A* pathfinding
+    algorithm with a real road network asset proves that computationally meaningful algorithms can be
+    embedded in mobile apps with excellent performance. The AI chatbot and schedule extraction features
+    illustrate how large language models can be practically applied to reduce administrative burden in
+    academic settings.
+  </p>
+  <p>
+    Key lessons learned include the importance of atomic database transactions for data integrity, the
+    power of Flutter's <code>InheritedNotifier</code> pattern for efficient state propagation, and the value
+    of designing role-based navigation as a first-class architectural concern rather than an afterthought.
+    KUET Bus is a functional, scalable, and extensible foundation for a smarter campus transport ecosystem —
+    one that can grow with the university as real IoT hardware and expanded services are introduced.
+  </p>
+
+  <h2 id="references"><span class="sec-num">12</span>References &amp; Technologies Used</h2>
+
+  <h3>Frameworks &amp; SDKs</h3>
+  <table>
+    <tr><th>Technology</th><th>Version</th><th>Purpose</th></tr>
+    <tr><td>Flutter SDK</td><td>≥ 3.5.0</td><td>Cross-platform mobile framework</td></tr>
+    <tr><td>Dart</td><td>≥ 3.5.0</td><td>Programming language</td></tr>
+  </table>
+
+  <h3>Firebase Services</h3>
+  <table>
+    <tr><th>Service</th><th>Package</th><th>Purpose</th></tr>
+    <tr><td>Firebase Auth</td><td>firebase_auth ^5.6.2</td><td>User authentication</td></tr>
+    <tr><td>Cloud Firestore</td><td>cloud_firestore ^5.6.8</td><td>Real-time NoSQL database</td></tr>
+    <tr><td>Firebase Storage</td><td>firebase_storage ^12.3.6</td><td>Profile image hosting</td></tr>
+    <tr><td>Firebase Messaging</td><td>firebase_messaging ^15.1.6</td><td>Push notifications (FCM)</td></tr>
+    <tr><td>Firebase Realtime DB</td><td>firebase_database ^11.1.6</td><td>Supplementary real-time data</td></tr>
+  </table>
+
+  <h3>Third-Party Packages</h3>
+  <table>
+    <tr><th>Package</th><th>Version</th><th>Purpose</th></tr>
+    <tr><td>flutter_map</td><td>^7.0.2</td><td>OpenStreetMap tile rendering</td></tr>
+    <tr><td>latlong2</td><td>^0.9.1</td><td>Geographic coordinate types</td></tr>
+    <tr><td>geolocator</td><td>^13.0.2</td><td>Device GPS access</td></tr>
+    <tr><td>image_picker</td><td>^1.1.2</td><td>Gallery photo selection</td></tr>
+    <tr><td>shared_preferences</td><td>^2.3.5</td><td>Local preference persistence</td></tr>
+    <tr><td>permission_handler</td><td>^12.0.1</td><td>Runtime permission requests</td></tr>
+    <tr><td>flutter_local_notifications</td><td>^18.0.0</td><td>System tray notifications</td></tr>
+    <tr><td>google_sign_in</td><td>6.2.1</td><td>Google OAuth 2.0</td></tr>
+    <tr><td>flutter_svg</td><td>^2.2.3</td><td>SVG asset rendering</td></tr>
+    <tr><td>http</td><td>^1.2.2</td><td>HTTP API calls (weather, OpenAI)</td></tr>
+  </table>
+
+  <h3>External APIs &amp; Data Sources</h3>
+  <table>
+    <tr><th>API / Data Source</th><th>Usage</th></tr>
+    <tr><td>OpenStreetMap</td><td>Map tile layer (free, open license)</td></tr>
+    <tr><td>OpenAI API (GPT)</td><td>Chatbot responses + AI schedule extraction</td></tr>
+    <tr><td>Weather HTTP API</td><td>Live weather data for Home dashboard</td></tr>
+    <tr><td>Khulna GeoJSON asset</td><td>Local road network for A* pathfinding</td></tr>
+  </table>
+
+  <!-- Report footer -->
+  <div class="report-footer">
+    <img src="../android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="logo" />
+    <div>
+      <strong>KUET Bus — Smart Campus Bus Tracking &amp; Management System</strong><br/>
+      Md. Aiful Alam Mahim &nbsp;·&nbsp; Khulna University of Engineering &amp; Technology &nbsp;·&nbsp; 2025–2026
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

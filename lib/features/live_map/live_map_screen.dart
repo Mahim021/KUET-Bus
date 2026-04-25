@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/theme/app_theme.dart';
@@ -13,10 +14,7 @@ import '../../core/services/firestore_service.dart';
 import '../../models/bus_location.dart';
 
 // ── Coordinates ───────────────────────────────────────────────────────────────
-// KUET campus, Khulna, Bangladesh
 const _kCampus = LatLng(22.9000, 89.5012);
-
-// Simulated live bus position (midway on the Dakbangla → KUET corridor)
 const _kInitialBus = LatLng(22.8720, 89.5210);
 
 // ── Screen ────────────────────────────────────────────────────────────────────
@@ -47,7 +45,11 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   StreamSubscription<List<BusLocation>>? _locationSub;
   LatLng _busPosition = _kInitialBus;
 
-  // A* demo state (prototype, used until hardware GPS is ready)
+  // User location state
+  LatLng? _userLocation;
+  bool _locatingUser = false;
+
+  // A* demo state
   bool _routeMode = false;
   bool _networkLoading = false;
   String? _networkError;
@@ -60,21 +62,65 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   List<LatLng> _routePath = const <LatLng>[];
   AStarResult? _lastRouteResult;
 
-  /// Call this method to update the bus position from a real-time source
-  /// (e.g., Firebase Realtime DB, WebSocket, etc.)
-  void updateBusPosition(LatLng position) {
-    setState(() => _busPosition = position);
-    _mapController.move(_busPosition, _mapController.camera.zoom);
-  }
-
   void _centerOnBus() {
     _mapController.move(_busPosition, 15.0);
   }
 
-  Future<void> _ensureRoadNetworkLoaded() async {
-    if (_roadNetwork != null || _networkLoading) {
-      return;
+  Future<void> _showUserLocation() async {
+    setState(() => _locatingUser = true);
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          setState(() => _locatingUser = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location services are disabled.')),
+          );
+        }
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(() => _locatingUser = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Location permission denied. Enable it in Settings.')),
+          );
+        }
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      final userPos = LatLng(position.latitude, position.longitude);
+      if (!mounted) return;
+      setState(() {
+        _userLocation = userPos;
+        _locatingUser = false;
+      });
+      _mapController.move(userPos, 15.0);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _locatingUser = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not get location: $e')),
+        );
+      }
     }
+  }
+
+  Future<void> _ensureRoadNetworkLoaded() async {
+    if (_roadNetwork != null || _networkLoading) return;
     setState(() {
       _networkLoading = true;
       _networkError = null;
@@ -110,9 +156,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     final next = !_routeMode;
     setState(() => _routeMode = next);
     _clearRouteSelection();
-    if (next) {
-      await _ensureRoadNetworkLoaded();
-    }
+    if (next) await _ensureRoadNetworkLoaded();
   }
 
   (int nodeId, LatLng point, double meters) _snapToNearestNode(
@@ -123,7 +167,8 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     var bestDist = double.infinity;
 
     for (final node in network.nodes) {
-      final d = haversineMeters(tap.latitude, tap.longitude, node.lat, node.lng);
+      final d =
+          haversineMeters(tap.latitude, tap.longitude, node.lat, node.lng);
       if (d < bestDist) {
         bestDist = d;
         bestId = node.id;
@@ -135,15 +180,11 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   }
 
   Future<void> _handleMapTap(TapPosition tapPosition, LatLng latLng) async {
-    if (!_routeMode) {
-      return;
-    }
+    if (!_routeMode) return;
 
     if (_roadNetwork == null) {
       await _ensureRoadNetworkLoaded();
-      if (_roadNetwork == null) {
-        return;
-      }
+      if (_roadNetwork == null) return;
     }
 
     final network = _roadNetwork!;
@@ -174,7 +215,8 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
       final points = path == null
           ? const <LatLng>[]
           : path
-              .map((id) => LatLng(network.nodes[id].lat, network.nodes[id].lng))
+              .map((id) =>
+                  LatLng(network.nodes[id].lat, network.nodes[id].lng))
               .toList(growable: false);
 
       if (!mounted) return;
@@ -197,9 +239,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   void initState() {
     super.initState();
     _locationSub = _firestore.watchBusLocations().listen((locations) {
-      if (!mounted || locations.isEmpty) {
-        return;
-      }
+      if (!mounted || locations.isEmpty) return;
       final latest = locations.first;
       final newPos = LatLng(latest.position.lat, latest.position.lng);
       setState(() => _busPosition = newPos);
@@ -215,10 +255,12 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = AppThemeData.of(context);
+    final canPop = Navigator.canPop(context);
+
     return Scaffold(
       body: Stack(
         children: [
-          // ── Real OpenStreetMap ──────────────────────────────────────────
+          // ── OpenStreetMap ───────────────────────────────────────────────
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
@@ -229,14 +271,16 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
               onTap: _handleMapTap,
             ),
             children: [
-              // OSM tile layer
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate:
+                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.kuet.kuet_bus',
                 maxNativeZoom: 19,
               ),
 
-              if (_startPoint != null && _endPoint != null && _routePath.isEmpty)
+              if (_startPoint != null &&
+                  _endPoint != null &&
+                  _routePath.isEmpty)
                 PolylineLayer(
                   polylines: [
                     Polyline(
@@ -258,10 +302,8 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
                   ],
                 ),
 
-              // Markers
               MarkerLayer(
                 markers: [
-                  // Campus destination
                   Marker(
                     point: _kCampus,
                     width: 52,
@@ -269,13 +311,19 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
                     alignment: Alignment.topCenter,
                     child: const _DestinationMarker(),
                   ),
-                  // Live bus
                   Marker(
                     point: _busPosition,
                     width: 60,
                     height: 60,
                     child: const _BusMapMarker(),
                   ),
+                  if (_userLocation != null)
+                    Marker(
+                      point: _userLocation!,
+                      width: 52,
+                      height: 52,
+                      child: const _UserLocationMarker(),
+                    ),
                 ],
               ),
 
@@ -287,26 +335,37 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
                         point: _startPoint!,
                         width: 44,
                         height: 44,
-                        child: const _RoutePin(color: Color(0xFFEF4444), label: 'S'),
+                        child: const _RoutePin(
+                            color: Color(0xFFEF4444), label: 'S'),
                       ),
                     if (_endPoint != null)
                       Marker(
                         point: _endPoint!,
                         width: 44,
                         height: 44,
-                        child: const _RoutePin(color: Color(0xFF3B82F6), label: 'D'),
+                        child: const _RoutePin(
+                            color: Color(0xFF3B82F6), label: 'D'),
                       ),
                   ],
                 ),
             ],
           ),
 
-          // ── Top overlay ────────────────────────────────────────────────
+          // ── Top overlay ─────────────────────────────────────────────────
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Row(
                 children: [
+                  if (canPop) ...[
+                    _NavButton(
+                      icon: Icons.arrow_back_rounded,
+                      onTap: () => Navigator.pop(context),
+                      background: theme.surface,
+                      iconColor: theme.text,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   Expanded(
                     child: Container(
                       height: 48,
@@ -342,19 +401,32 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   _NavButton(
                     icon: _routeMode
                         ? Icons.close_rounded
                         : Icons.alt_route_rounded,
                     onTap: _toggleRouteMode,
-                    background:
-                        _routeMode ? AppColors.primary : theme.surface,
+                    background: _routeMode ? AppColors.primary : theme.surface,
                     iconColor: _routeMode ? Colors.white : theme.text,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
+                  // Show user's GPS location
                   _NavButton(
-                    icon: Icons.my_location_rounded,
+                    icon: _locatingUser
+                        ? Icons.location_searching_rounded
+                        : Icons.my_location_rounded,
+                    onTap: _locatingUser ? () {} : _showUserLocation,
+                    background: _userLocation != null
+                        ? const Color(0xFF1565C0)
+                        : theme.surface,
+                    iconColor:
+                        _userLocation != null ? Colors.white : theme.text,
+                  ),
+                  const SizedBox(width: 8),
+                  // Center map on bus
+                  _NavButton(
+                    icon: Icons.directions_bus_rounded,
                     onTap: _centerOnBus,
                     background: AppColors.primary,
                     iconColor: Colors.white,
@@ -496,9 +568,7 @@ class _RouteStatusBanner extends StatelessWidget {
   });
 
   String _fmtMeters(double meters) {
-    if (meters >= 1000) {
-      return '${(meters / 1000).toStringAsFixed(2)} km';
-    }
+    if (meters >= 1000) return '${(meters / 1000).toStringAsFixed(2)} km';
     return '${meters.toStringAsFixed(0)} m';
   }
 
@@ -638,6 +708,33 @@ class _BusMapMarker extends StatelessWidget {
   }
 }
 
+class _UserLocationMarker extends StatelessWidget {
+  const _UserLocationMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1565C0),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 3),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x661565C0),
+            blurRadius: 12,
+            spreadRadius: 3,
+          ),
+        ],
+      ),
+      child: const Icon(
+        Icons.person_pin_rounded,
+        color: Colors.white,
+        size: 24,
+      ),
+    );
+  }
+}
+
 class _DestinationMarker extends StatelessWidget {
   const _DestinationMarker();
 
@@ -672,7 +769,8 @@ class _DestinationMarker extends StatelessWidget {
           height: 8,
           decoration: const BoxDecoration(
             color: Color(0xFF1B5E20),
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(2)),
+            borderRadius:
+                BorderRadius.vertical(bottom: Radius.circular(2)),
           ),
         ),
       ],
@@ -718,6 +816,3 @@ class _NavButton extends StatelessWidget {
     );
   }
 }
-
-// Hardcoded bus detail UI removed. We'll reintroduce a dynamic version later
-// once bus metadata (name/driver/ETA) is available from the backend.
