@@ -26,6 +26,8 @@ class FirestoreService {
       _db.collection('schedules');
   CollectionReference<Map<String, dynamic>> get _busLocations =>
       _db.collection('bus_locations');
+  CollectionReference<Map<String, dynamic>> get _control =>
+      _db.collection('control');
 
   // Unique index collections (enforced via rules + transactions in this service).
   CollectionReference<Map<String, dynamic>> get _uniqueBusNumbers =>
@@ -420,6 +422,70 @@ class FirestoreService {
 
   Future<void> deleteSchedule(String docId) {
     return _schedules.doc(docId).delete();
+  }
+
+  String generateJourneyId({String? tripName}) {
+    final now = DateTime.now();
+    final stamp =
+        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}';
+    final normalizedName = _normalizeKey(tripName ?? '').replaceAll('-', '_');
+    if (normalizedName.isEmpty) {
+      return 'trip_$stamp';
+    }
+    return 'trip_${normalizedName}_$stamp';
+  }
+
+  Stream<DocumentSnapshot<Map<String, dynamic>>> watchJourneyControl(
+      String busId) {
+    return _control.doc(busId).snapshots();
+  }
+
+  Future<String> startJourneyLogging({
+    required String busId,
+    String? tripName,
+  }) async {
+    final normalizedBusId = busId.trim();
+    if (normalizedBusId.isEmpty) {
+      throw Exception('Bus ID is required');
+    }
+
+    final cleanedTripName = _nullIfBlank(tripName);
+    final journeyId = generateJourneyId(tripName: cleanedTripName);
+
+    await _control.doc(normalizedBusId).set(
+      {
+        'logging': true,
+        'loggingEnabled': FieldValue.delete(),
+        'journeyId': journeyId,
+        'tripName': cleanedTripName,
+        'stoppedAt': FieldValue.delete(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'startedAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
+
+    return journeyId;
+  }
+
+  Future<void> stopJourneyLogging(String busId) {
+    final normalizedBusId = busId.trim();
+    if (normalizedBusId.isEmpty) {
+      return Future.error(Exception('Bus ID is required'));
+    }
+
+    return _control.doc(normalizedBusId).set(
+      {
+        'logging': false,
+        'loggingEnabled': FieldValue.delete(),
+        'journeyId': '',
+        'tripName': FieldValue.delete(),
+        'startedAt': FieldValue.delete(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'stoppedAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
   }
 
   // ── AI-extracted pending / live schedules ─────────────────────────────────
