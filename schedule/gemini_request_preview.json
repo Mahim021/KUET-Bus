@@ -1,0 +1,100 @@
+{
+  "is_schedule_update": true,
+  "confidence": 0.95,
+  "reason": "Extracted bus schedule from official KUET notice dated 2024-04-01",
+  "date": "2024-04-01",
+  "is_override": true,
+  "routes": [
+    {
+      "route_name": "রুপসা",
+      "stops": [
+        {
+          "stop_name": "ক্যাম্পাস",
+          "time": "06:30"
+        },
+        {
+          "stop_name": "রুপসা",
+          "time": "07:10"
+        }
+      ]
+    },
+    {
+      "route_name": "গল্পামারী",
+      "stops": [
+        {
+          "stop_name": "ক্যাম্পাস",
+          "time": "06:30"
+        },
+        {
+          "stop_name": "গল্পামারী",
+          "time": "07:10"
+        }
+      ]
+    },
+    {
+      "route_name": "রুপসা (আবাসিক এলাকা)",
+      "stops": [
+        {
+          "stop_name": "ক্যাম্পাস",
+          "time": "07:00"
+        },
+        {
+          "stop_name": "রুপসা",
+          "time": "08:00"
+        }
+      ]
+    },
+    {
+      "route_name": "সোনাডাঙ্গা",
+      "stops": [
+        {
+          "stop_name": "ক্যাম্পাস",
+          "time": "07:20"
+        },
+        {
+          "stop_name": "সোনাডাঙ্গা",
+          "time": "08:20"
+        }
+      ]
+    },
+    {
+      "route_name": "ফুলতলা বাজার",
+      "stops": [
+        {
+          "stop_name": "ক্যাম্পাস",
+          "time": "07:50"
+        },
+        {
+          "stop_name": "ফুলতলা বাজার",
+          "time": "08:25"
+        }
+      ]
+    },
+    {
+      "route_name": "শনিবার - সোনাডাঙ্গা",
+      "stops": [
+        {
+          "stop_name": "ক্যাম্পাস",
+          "time": "09:30"
+        },
+        {
+          "stop_name": "ফেরীঘাট",
+          "time": "12:30"
+        }
+      ]
+    },
+    {
+      "route_name": "শনিবার - আবাসিক এলাকা",
+      "stops": [
+        {
+          "stop_name": "ক্যাম্পাস",
+          "time": "09:30"
+        },
+        {
+          "stop_name": "শিববাড়ী",
+          "time": "12:30"
+        }
+      ]
+    }
+  ]
+}

@@ -92,6 +92,26 @@ class FirestoreService {
     })();
   }
 
+  Stream<List<Map<String, dynamic>>> watchEmailSchedules({int limit = 30}) {
+    return (() async* {
+      final user = FirebaseAuth.instance.currentUser;
+      try {
+        await user?.getIdToken(true);
+      } catch (_) {}
+
+      yield* _db
+          .collection('email_schedules')
+          .orderBy('receivedAt', descending: true)
+          .limit(limit)
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map((doc) => <String, dynamic>{'id': doc.id, ...doc.data()})
+                .toList(),
+          );
+    })();
+  }
+
   Stream<List<BusLocation>> watchBusLocations() {
     return _busLocations.snapshots().map((snapshot) => snapshot.docs
         .map((doc) => BusLocation.fromJson(doc.data(), busId: doc.id))

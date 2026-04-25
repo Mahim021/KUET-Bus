@@ -99,6 +99,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /email_schedules/{docId} {
+      // Email-ingested schedules should be visible to any authenticated app user.
+      // Keep writes admin-only.
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
     match /bus_locations/{docId} {
       allow read: if canUseApp();
       allow write: if isAdmin()
