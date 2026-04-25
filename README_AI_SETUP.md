@@ -68,8 +68,11 @@ firebase functions:secrets:set GMAIL_CLIENT_SECRET
 firebase functions:secrets:set GMAIL_REFRESH_TOKEN
 firebase functions:secrets:set GMAIL_USER
 firebase functions:secrets:set AUTHORITY_EMAIL
+firebase functions:secrets:set AUTHORITY_EMAIL_DOMAIN
 firebase functions:secrets:set PUBSUB_TOPIC
 ```
+
+`AUTHORITY_EMAIL_DOMAIN` is optional. Set it to `stud.kuet.ac.bd` if you want to allow any sender like `...@stud.kuet.ac.bd`.
 
 Or use the `.env` file in `functions/` for local development with the Firebase Emulator.
 
@@ -124,7 +127,7 @@ Gmail API pushes notification to Google Pub/Sub
         ↓
 handleGmailPubSub Cloud Function fires
         ↓
-Checks sender == AUTHORITY_EMAIL
+Checks sender matches AUTHORITY_EMAIL or AUTHORITY_EMAIL_DOMAIN
         ↓
 Downloads email body / PDF attachment
         ↓
@@ -178,7 +181,7 @@ Chatbot reads live_schedules/{today} for context
 
 ### Test Gmail Watch (full end-to-end)
 1. Deploy functions and run `setupGmailWatch`.
-2. Send an email to the watched inbox **from** `AUTHORITY_EMAIL` with bus schedule info.
+2. Send an email to the watched inbox **from** `AUTHORITY_EMAIL` (or an email under `AUTHORITY_EMAIL_DOMAIN`) with bus schedule info.
 3. Wait ~10 seconds → check Firebase Functions logs for extraction output.
 4. Check Firestore `pending_schedules` collection for the new document.
 5. Check the app — a push notification should arrive.

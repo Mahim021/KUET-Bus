@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +27,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final _firestore = FirestoreService();
   _AdminSection _section = _AdminSection.notices;
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_firestore.repairBusLocationDocuments());
+    unawaited(_firestore.syncGpsServiceFlagsFromBusLocations());
+  }
 
   Future<bool> _runAdminAction(
     Future<void> Function() action,
@@ -332,53 +341,68 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final plateNumber =
         TextEditingController(text: existing?.plateNumber ?? '');
     final driverId = TextEditingController(text: existing?.driverId ?? '');
+    var hasGpsService = existing?.hasGpsService ?? false;
 
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (sheetContext) {
-        return _editorSheet(
-          title: existing == null ? 'Create Bus' : 'Update Bus',
-          child: Column(
-            children: [
-              _input(busNumber, 'Bus Number'),
-              const SizedBox(height: 10),
-              _input(busName, 'Bus Name'),
-              const SizedBox(height: 10),
-              _input(plateNumber, 'Plate Number (optional)'),
-              const SizedBox(height: 10),
-              _input(driverId, 'Driver ID (optional)'),
-              const SizedBox(height: 14),
-              _formActions(
-                sheetContext: sheetContext,
-                saveLabel: existing == null ? 'Create' : 'Update',
-                onSave: () async {
-                  if (busNumber.text.trim().isEmpty ||
-                      busName.text.trim().isEmpty) {
-                    throw Exception('Bus number and bus name are required');
-                  }
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return _editorSheet(
+              title: existing == null ? 'Create Bus' : 'Update Bus',
+              child: Column(
+                children: [
+                  _input(busNumber, 'Bus Number'),
+                  const SizedBox(height: 10),
+                  _input(busName, 'Bus Name'),
+                  const SizedBox(height: 10),
+                  _input(plateNumber, 'Plate Number (optional)'),
+                  const SizedBox(height: 10),
+                  _input(driverId, 'Driver ID (optional)'),
+                  const SizedBox(height: 4),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    value: hasGpsService,
+                    onChanged: _busy
+                        ? null
+                        : (value) => setModalState(() => hasGpsService = value),
+                    title: const Text('GPS Service Enabled'),
+                  ),
+                  const SizedBox(height: 10),
+                  _formActions(
+                    sheetContext: sheetContext,
+                    saveLabel: existing == null ? 'Create' : 'Update',
+                    onSave: () async {
+                      if (busNumber.text.trim().isEmpty ||
+                          busName.text.trim().isEmpty) {
+                        throw Exception('Bus number and bus name are required');
+                      }
 
-                  final bus = Bus(
-                    id: existing?.id,
-                    busNumber: busNumber.text.trim(),
-                    busName: busName.text.trim(),
-                    plateNumber: _nullIfBlank(plateNumber.text),
-                    driverId: _nullIfBlank(driverId.text),
-                    createdAt: existing?.createdAt ?? DateTime.now(),
-                    updatedAt: DateTime.now(),
-                  );
+                      final bus = Bus(
+                        id: existing?.id,
+                        busNumber: busNumber.text.trim(),
+                        busName: busName.text.trim(),
+                        hasGpsService: hasGpsService,
+                        plateNumber: _nullIfBlank(plateNumber.text),
+                        driverId: _nullIfBlank(driverId.text),
+                        createdAt: existing?.createdAt ?? DateTime.now(),
+                        updatedAt: DateTime.now(),
+                      );
 
-                  final ok = await _runAdminAction(
-                    () => _firestore.upsertBus(bus),
-                    existing == null ? 'Bus created' : 'Bus updated',
-                  );
-                  if (ok && sheetContext.mounted) {
-                    Navigator.of(sheetContext).pop();
-                  }
-                },
+                      final ok = await _runAdminAction(
+                        () => _firestore.upsertBus(bus),
+                        existing == null ? 'Bus created' : 'Bus updated',
+                      );
+                      if (ok && sheetContext.mounted) {
+                        Navigator.of(sheetContext).pop();
+                      }
+                    },
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -550,14 +574,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         .snapshots(),
                     builder: (context, snapshot) {
                       final docs = snapshot.data?.docs ?? const [];
-                      final selectedValue =
-                          selectedRouteId != null &&
-                                  selectedRouteId!.isNotEmpty &&
-                                  docs.any((d) => d.id == selectedRouteId)
-                              ? selectedRouteId
-                              : null;
+                      final selectedValue = selectedRouteId != null &&
+                              selectedRouteId!.isNotEmpty &&
+                              docs.any((d) => d.id == selectedRouteId)
+                          ? selectedRouteId
+                          : null;
                       return DropdownButtonFormField<String>(
-                        value: selectedValue,
+                        initialValue: selectedValue,
                         decoration: _decoration('Route Name'),
                         items: docs.map((doc) {
                           final routeName =
@@ -584,14 +607,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         .snapshots(),
                     builder: (context, snapshot) {
                       final docs = snapshot.data?.docs ?? const [];
-                      final selectedValue =
-                          selectedBusId != null &&
-                                  selectedBusId!.isNotEmpty &&
-                                  docs.any((d) => d.id == selectedBusId)
-                              ? selectedBusId
-                              : null;
+                      final selectedValue = selectedBusId != null &&
+                              selectedBusId!.isNotEmpty &&
+                              docs.any((d) => d.id == selectedBusId)
+                          ? selectedBusId
+                          : null;
                       return DropdownButtonFormField<String>(
-                        value: selectedValue,
+                        initialValue: selectedValue,
                         decoration: _decoration('Bus Name'),
                         items: docs.map((doc) {
                           final data = doc.data();
@@ -1050,6 +1072,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   title: '${bus.busNumber} · ${bus.busName}',
                   docId: doc.id,
                   lines: [
+                    'GPS Service: ${bus.hasGpsService ? 'Enabled' : 'Disabled'}',
                     'Plate: ${bus.plateNumber ?? 'N/A'}',
                     'Driver ID: ${bus.driverId ?? 'N/A'}',
                   ],
@@ -1265,24 +1288,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: theme.bg,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: theme.border),
-                ),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 160),
-                  child: Text(
-                    docId,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: theme.subText, fontSize: 11),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
               iconAction(
                 icon: Icons.edit_rounded,
                 onTap: onEdit,
@@ -1413,24 +1418,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               )
             : Text(label),
-      ),
-    );
-  }
-
-  Widget _dangerButton(String label, VoidCallback onPressed) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _busy ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFC62828),
-          disabledBackgroundColor:
-              const Color(0xFFC62828).withValues(alpha: 0.4),
-          foregroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        child: Text(label),
       ),
     );
   }

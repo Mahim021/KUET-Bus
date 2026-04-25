@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -27,8 +28,10 @@ Future<void> main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Register background handler before anything else.
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  // Register background handler before anything else on mobile platforms.
+  if (!kIsWeb) {
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  }
 
   await _initLocalNotifications();
   await _initFCM();
@@ -38,8 +41,10 @@ Future<void> main() async {
 
 // ── Local notifications setup ─────────────────────────────────────────────────
 Future<void> _initLocalNotifications() async {
-  const androidSettings =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
+  // Skip local-notification bootstrapping on web.
+  if (kIsWeb) return;
+
+  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
   const iosSettings = DarwinInitializationSettings(
     requestAlertPermission: false,
     requestBadgePermission: false,
@@ -78,8 +83,10 @@ Future<void> _initFCM() async {
     sound: true,
   );
 
-  // Subscribe every device to the shared topic.
-  await messaging.subscribeToTopic('all_users');
+  // Topic subscription is unsupported on web clients.
+  if (!kIsWeb) {
+    await messaging.subscribeToTopic('all_users');
+  }
 
   // Foreground messages — show as a local notification.
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
