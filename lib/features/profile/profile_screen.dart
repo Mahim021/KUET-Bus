@@ -26,6 +26,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _loading = true;
   bool _uploadingImage = false;
 
+  int _photoVersion = 0; // incremented after each upload to bust widget cache
+
   bool _pushNotifications = true;
   bool _departureReminders = true;
   bool _vibrationAlerts = false;
@@ -40,9 +42,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final student = await _firestore.fetchStudent(user.uid);
+      // If Firestore has no photo but we saved one locally, use the local one
+      Student? resolved = student;
+      if (student != null && (student.photoUrl == null || student.photoUrl!.isEmpty)) {
+        final prefs = await SharedPreferences.getInstance();
+        final localUrl = prefs.getString('local_photo_url_${user.uid}');
+        if (localUrl != null) {
+          resolved = Student(
+            uid: student.uid,
+            name: student.name,
+            email: student.email,
+            kuetId: student.kuetId,
+            department: student.department,
+            batch: student.batch,
+            role: student.role,
+            bloodGroup: student.bloodGroup,
+            hometown: student.hometown,
+            phoneNumber: student.phoneNumber,
+            photoUrl: localUrl,
+            photoPath: student.photoPath,
+            createdAt: student.createdAt,
+            updatedAt: student.updatedAt,
+          );
+          UserSession.instance.photoUrl = localUrl;
+        }
+      } else if (student?.photoUrl != null) {
+        UserSession.instance.photoUrl = student!.photoUrl;
+      }
       if (!mounted) return;
       setState(() {
-        _student = student;
+        _student = resolved;
         _loading = false;
       });
     } else {
@@ -82,17 +111,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _uploadingImage = true);
     try {
       final file = File(picked.path);
-      final storagePath = 'avatars/${user.uid}.jpg';
+      final storagePath = '${user.uid}.jpg';
       final supabase = Supabase.instance.client;
 
-      await supabase.storage.from('avatars').upload(
-            storagePath,
-            file,
-            fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'),
-          );
+      // Delete existing file first so we only need INSERT (not UPDATE) RLS.
+      // Ignore errors — file may not exist yet on first upload.
+      try {
+        await supabase.storage.from('avatars').remove([storagePath]);
+      } catch (_) {}
 
-      final baseUrl = supabase.storage.from('avatars').getPublicUrl(storagePath);
-      final url = '$baseUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+      // Upload fresh (retry up to 3 times for transient network failures).
+      Exception? lastError;
+      for (int attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await supabase.storage.from('avatars').upload(
+                storagePath,
+                file,
+                fileOptions: const FileOptions(contentType: 'image/jpeg'),
+              );
+          lastError = null;
+          break;
+        } on Exception catch (e) {
+          lastError = e;
+          if (attempt < 3) await Future.delayed(Duration(seconds: attempt));
+        }
+      }
+      if (lastError != null) throw lastError;
+
+      // Store the clean URL (no timestamp) so restarts always load correctly.
+      // Cache-busting in the same session is handled by _photoVersion below.
+      final url = supabase.storage.from('avatars').getPublicUrl(storagePath);
+
+      // Evict Flutter's in-memory image cache for this URL so the new image
+      // shows immediately without needing a timestamp in the stored URL.
+      imageCache.evict(NetworkImage(url));
+
+      // Save URL to Firestore; fall back to SharedPreferences if rules deny.
+      await user.getIdToken(true);
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set(
+              {
+                'photoUrl': url,
+                'photoPath': storagePath,
+                'updatedAt': FieldValue.serverTimestamp(),
+              },
+              SetOptions(merge: true),
+            );
+      } catch (_) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('local_photo_url_${user.uid}', url);
+      }
+
+      UserSession.instance.photoUrl = url;
 
       final current = _student;
       final updated = Student(
@@ -111,25 +184,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         createdAt: current?.createdAt,
         updatedAt: DateTime.now(),
       );
-      // Refresh token then write only the photo fields — avoids full-object
-      // serialization issues and minimises the Firestore write surface.
-      await user.getIdToken(true);
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .set(
-            {
-              'photoUrl': url,
-              'photoPath': storagePath,
-              'updatedAt': FieldValue.serverTimestamp(),
-            },
-            SetOptions(merge: true),
-          );
-      // Keep UserSession in sync so home screen header updates immediately
-      UserSession.instance.photoUrl = url;
+
       if (mounted) {
         setState(() {
           _student = updated;
+          _photoVersion++;
           _uploadingImage = false;
         });
       }
@@ -256,8 +315,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       ? Image.network(
                                           photoUrl,
                                           fit: BoxFit.cover,
-                                          // key forces rebuild when URL changes
-                                          key: ValueKey(photoUrl),
+                                          key: ValueKey('${photoUrl}_$_photoVersion'),
                                           errorBuilder: (_, __, ___) =>
                                               const Icon(
                                             Icons.person_rounded,

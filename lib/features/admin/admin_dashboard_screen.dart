@@ -24,7 +24,10 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  static const String _journeyBusId = 'DifQuawcrNM6OEVNqynF';
   final _firestore = FirestoreService();
+  final TextEditingController _journeyTripNameController =
+      TextEditingController();
   _AdminSection _section = _AdminSection.notices;
   bool _busy = false;
 
@@ -33,6 +36,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     super.initState();
     unawaited(_firestore.repairBusLocationDocuments());
     unawaited(_firestore.syncGpsServiceFlagsFromBusLocations());
+  }
+
+  @override
+  void dispose() {
+    _journeyTripNameController.dispose();
+    super.dispose();
   }
 
   Future<bool> _runAdminAction(
@@ -93,6 +102,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       },
     );
     return result ?? false;
+  }
+
+  Future<void> _refreshAuthForAdminWrites() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('You must be signed in as admin');
+    }
+
+    final token = await user.getIdTokenResult(true);
+    final role = token.claims?['role']?.toString().toLowerCase();
+    if (role != 'admin') {
+      throw Exception(
+        'Admin claim is missing. Re-run the admin claim script and sign in again.',
+      );
+    }
   }
 
   Future<RouteSelectionResult?> _pickRouteFromMap([
@@ -157,7 +181,190 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       case _AdminSection.locations:
         await _showLocationForm();
         break;
+      case _AdminSection.journeyControl:
+        break;
     }
+  }
+
+  String _formatControlTimestamp(dynamic value) {
+    DateTime? dt;
+    if (value is Timestamp) {
+      dt = value.toDate();
+    } else if (value is DateTime) {
+      dt = value;
+    } else if (value is String) {
+      dt = DateTime.tryParse(value);
+    }
+
+    if (dt == null) {
+      return 'N/A';
+    }
+
+    final local = dt.toLocal();
+    final month = local.month.toString().padLeft(2, '0');
+    final day = local.day.toString().padLeft(2, '0');
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    final second = local.second.toString().padLeft(2, '0');
+    return '${local.year}-$month-$day $hour:$minute:$second';
+  }
+
+  Widget _buildJourneyControlBody(AppThemeData theme) {
+    return StreamBuilder<List<Bus>>(
+      stream: _firestore.watchBuses(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return const Center(child: Text('Failed to load buses'));
+        }
+
+        final buses = snapshot.data ?? const <Bus>[];
+        final preferredBus =
+            buses.where((bus) => bus.id == _journeyBusId).toList();
+        final fallbackGpsBus = buses.where((bus) => bus.hasGpsService).toList();
+        final bus = preferredBus.isNotEmpty
+            ? preferredBus.first
+            : fallbackGpsBus.isNotEmpty
+                ? fallbackGpsBus.first
+                : null;
+
+        if (bus == null) {
+          return Center(
+            child: Text(
+              'No GPS-enabled bus found.',
+              style: TextStyle(color: theme.subText),
+            ),
+          );
+        }
+
+        final busId = bus.id ?? '';
+        final busLabel = bus.busName.trim().isEmpty
+            ? bus.busNumber
+            : '${bus.busName} (${bus.busNumber})';
+
+        if (busId.isEmpty) {
+          return Center(
+            child: Text(
+              'GPS bus is missing a Firestore document id.',
+              style: TextStyle(color: theme.subText),
+            ),
+          );
+        }
+
+        return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+          stream: _firestore.watchJourneyControl(busId),
+          builder: (context, controlSnapshot) {
+            final data = controlSnapshot.data?.data() ?? const {};
+            final logging = data['logging'] == true;
+            final journeyId = (data['journeyId'] as String?)?.trim() ?? '';
+            final tripName = (data['tripName'] as String?)?.trim() ?? '';
+            final updatedAt = _formatControlTimestamp(data['updatedAt']);
+
+            if (tripName.isNotEmpty &&
+                _journeyTripNameController.text.trim().isEmpty) {
+              _journeyTripNameController.text = tripName;
+            }
+
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: theme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: theme.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    busLabel,
+                    style: TextStyle(
+                      color: theme.text,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Bus ID: $busId',
+                    style: TextStyle(color: theme.subText, fontSize: 13),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Logging: ${logging ? 'ON' : 'OFF'}',
+                    style: TextStyle(color: theme.subText, fontSize: 13),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Journey ID: ${journeyId.isEmpty ? 'N/A' : journeyId}',
+                    style: TextStyle(color: theme.subText, fontSize: 13),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Last updated: $updatedAt',
+                    style: TextStyle(color: theme.subText, fontSize: 13),
+                  ),
+                  const SizedBox(height: 12),
+                  if (!logging) ...[
+                    _input(
+                      _journeyTripNameController,
+                      'Trip name (optional)',
+                    ),
+                    const SizedBox(height: 10),
+                    _actionButton('Start Logging', () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final ok = await _runAdminAction(() async {
+                        await _refreshAuthForAdminWrites();
+                        final journeyId = await _firestore.startJourneyLogging(
+                          busId: busId,
+                          tripName: _journeyTripNameController.text,
+                        );
+                        if (!mounted) {
+                          return;
+                        }
+                        messenger.showSnackBar(
+                          SnackBar(
+                              content: Text('Journey started: $journeyId')),
+                        );
+                      }, 'Journey logging enabled');
+                      if (ok) {
+                        _journeyTripNameController.clear();
+                      }
+                    }),
+                  ] else ...[
+                    if (tripName.isNotEmpty)
+                      Text(
+                        'Trip Name: $tripName',
+                        style: TextStyle(color: theme.subText, fontSize: 13),
+                      ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: _busy
+                          ? null
+                          : () async {
+                              await _runAdminAction(
+                                () async {
+                                  await _refreshAuthForAdminWrites();
+                                  await _firestore.stopJourneyLogging(busId);
+                                },
+                                'Journey logging stopped',
+                              );
+                            },
+                      icon: const Icon(Icons.stop_rounded),
+                      label: const Text('Stop Logging'),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _showUserForm({Student? existing}) {
@@ -910,18 +1117,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: _actionButton(
-              'Create ${_section.singularLabel}', _openCreateSheet),
-        ),
-      ),
+      bottomNavigationBar: _section == _AdminSection.journeyControl
+          ? null
+          : SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: _actionButton(
+                    'Create ${_section.singularLabel}', _openCreateSheet),
+              ),
+            ),
     );
   }
 
   Widget _buildSectionBody(AppThemeData theme) {
+    if (_section == _AdminSection.journeyControl) {
+      return _buildJourneyControlBody(theme);
+    }
+
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collection(_section.collectionName)
@@ -1152,6 +1365,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         'Location deleted');
                   },
                 );
+              case _AdminSection.journeyControl:
+                return const SizedBox.shrink();
             }
           },
         );
@@ -1430,6 +1645,7 @@ enum _AdminSection {
   routes,
   schedules,
   locations,
+  journeyControl,
 }
 
 extension on _AdminSection {
@@ -1447,6 +1663,8 @@ extension on _AdminSection {
         return 'Schedules';
       case _AdminSection.locations:
         return 'Bus Locations';
+      case _AdminSection.journeyControl:
+        return 'Journey Control';
     }
   }
 
@@ -1464,6 +1682,8 @@ extension on _AdminSection {
         return 'Schedule';
       case _AdminSection.locations:
         return 'Location';
+      case _AdminSection.journeyControl:
+        return 'Journey';
     }
   }
 
@@ -1481,6 +1701,8 @@ extension on _AdminSection {
         return 'schedules';
       case _AdminSection.locations:
         return 'bus_locations';
+      case _AdminSection.journeyControl:
+        return 'control';
     }
   }
 }

@@ -3,9 +3,9 @@ import '../../core/services/auth_role_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../admin/admin_dashboard_screen.dart';
 import '../chatbot/chatbot_widget.dart';
+import '../email_schedules/email_schedules_screen.dart';
 import '../home/home_screen.dart';
 import '../live_map/live_map_screen.dart';
-import '../schedule/schedule_screen.dart';
 import '../notices/notices_screen.dart';
 import '../profile/profile_screen.dart';
 
@@ -28,16 +28,17 @@ class MainShellState extends State<MainShell> {
     navigateTo(index);
   }
 
-  // Notices is always at index 3 (Live Map or Admin occupies index 2).
   int _noticesIndex() => 3;
+  int _profileIndex() => 4;
 
   void navigateToNotices() => navigateTo(_noticesIndex());
+  void navigateToProfile() => navigateTo(_profileIndex());
 
   List<Widget> _screens(bool isAdmin) {
     if (!isAdmin) {
       return const <Widget>[
         HomeScreen(),
-        ScheduleScreen(),
+        EmailSchedulesScreen(),
         LiveMapScreen(),
         NoticesScreen(),
         ProfileScreen(),
@@ -46,7 +47,7 @@ class MainShellState extends State<MainShell> {
 
     return const <Widget>[
       HomeScreen(),
-      ScheduleScreen(),
+      EmailSchedulesScreen(),
       AdminDashboardScreen(),
       NoticesScreen(),
       ProfileScreen(),
@@ -80,7 +81,7 @@ class MainShellState extends State<MainShell> {
       initialData: false,
       builder: (context, snapshot) {
         final isAdmin = snapshot.data ?? false;
-final screens = _screens(isAdmin);
+        final screens = _screens(isAdmin);
         final items = _items(isAdmin);
         final safeIndex = _currentIndex >= screens.length ? 0 : _currentIndex;
 

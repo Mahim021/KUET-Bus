@@ -80,8 +80,9 @@ class HomeScreen extends StatelessWidget {
           return Row(
         children: [
           GestureDetector(
-            onTap: () =>
-                context.findAncestorStateOfType<MainShellState>()?.navigateTo(4),
+            onTap: () => context
+                .findAncestorStateOfType<MainShellState>()
+                ?.navigateToProfile(),
             child: Container(
               width: 52,
               height: 52,
@@ -100,8 +101,7 @@ class HomeScreen extends StatelessWidget {
                             size: 28, color: theme.subText),
                       ),
                     )
-                  : Icon(Icons.person_rounded,
-                      size: 28, color: theme.subText),
+                  : Icon(Icons.person_rounded, size: 28, color: theme.subText),
             ),
           ),
           const SizedBox(width: 14),
@@ -144,8 +144,9 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           GestureDetector(
-            onTap: () =>
-                context.findAncestorStateOfType<MainShellState>()?.navigateTo(3),
+            onTap: () => context
+                .findAncestorStateOfType<MainShellState>()
+                ?.navigateToNotices(),
             child: Stack(
               children: [
                 Container(

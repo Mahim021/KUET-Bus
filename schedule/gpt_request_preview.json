@@ -1,0 +1,60 @@
+{
+  "is_schedule_update": true,
+  "confidence": 0.9,
+  "reason": "Extracted from clear images.",
+  "date": "2023-04-01",
+  "is_override": true,
+  "routes": [
+    {
+      "route_name": "Route 1",
+      "stops": [
+        {
+          "stop_name": "Campus",
+          "time": "07:30"
+        },
+        {
+          "stop_name": "Sonadanga",
+          "time": "08:00"
+        },
+        {
+          "stop_name": "Gollamari",
+          "time": "08:15"
+        }
+      ]
+    },
+    {
+      "route_name": "Route 2",
+      "stops": [
+        {
+          "stop_name": "Campus",
+          "time": "09:00"
+        },
+        {
+          "stop_name": "Fulbari",
+          "time": "09:30"
+        },
+        {
+          "stop_name": "Rupsha",
+          "time": "09:45"
+        }
+      ]
+    },
+    {
+      "route_name": "Route 3",
+      "stops": [
+        {
+          "stop_name": "Campus",
+          "time": "10:00"
+        },
+        {
+          "stop_name": "Daulatpur",
+          "time": "10:30"
+        },
+        {
+          "stop_name": "Khalishpur",
+          "time": "10:45"
+        }
+      ]
+    }
+  ]
+}
