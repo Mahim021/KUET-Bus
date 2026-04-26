@@ -85,6 +85,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   static const double _routeTapToleranceMeters = 80;
   static const Duration _busFreshThreshold = Duration(seconds: 45);
   bool _prototypeEnabled = false;
+  bool _showPrototypeForm = true;
   bool _normalSuggestFlowStarted = false;
   _TapSelectionStage _tapSelectionStage = _TapSelectionStage.bus;
   LatLng? _prototypeBusPosition;
@@ -1182,6 +1183,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
                         setState(() {
                           _prototypeEnabled = !_prototypeEnabled;
                           enabled = _prototypeEnabled;
+                          _showPrototypeForm = true;
                           if (!_prototypeEnabled) {
                             _tapSelectionStage = _TapSelectionStage.bus;
                             _prototypeBusPosition = null;
@@ -1299,53 +1301,76 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _PrototypeControlCard(
-                        theme: theme,
-                        selectionStage: _tapSelectionStage,
-                        hasBusPoint: _prototypeBusPosition != null,
-                        hasStudentPoint: _studentPosition != null,
-                        availableRoutes: availableRoutes,
-                        selectedRouteId: selectedRouteId,
-                        busSpeedMetersPerSec: _busSpeedMetersPerSec,
-                        studentSpeedMetersPerSec: _studentWalkMetersPerSec,
-                        onRouteChanged: (routeId) {
-                          setState(() {
-                            _forcedRouteId = routeId;
-                            _tapSelectionStage = _TapSelectionStage.bus;
-                            _prototypeBusPosition = null;
-                            _studentPosition = null;
-                            _pickupSuggestion = null;
-                            _refreshSelectedBusState();
-                          });
-                          unawaited(_recomputePickupSuggestion());
-                        },
-                        onResetSelection: () {
-                          setState(() {
-                            _tapSelectionStage = _TapSelectionStage.bus;
-                            _prototypeBusPosition = null;
-                            _studentPosition = null;
-                            _pickupSuggestion = null;
-                          });
-                          unawaited(_recomputePickupSuggestion());
-                        },
-                        onBusSpeedChanged: (value) {
-                          setState(() {
-                            _busSpeedMetersPerSec = value;
-                            _pickupSuggestion = null;
-                          });
-                          unawaited(_recomputePickupSuggestion());
-                        },
-                        onStudentSpeedChanged: (value) {
-                          setState(() {
-                            _studentWalkMetersPerSec = value;
-                            _pickupSuggestion = null;
-                          });
-                          unawaited(_recomputePickupSuggestion());
-                        },
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: FilledButton.tonalIcon(
+                          onPressed: () {
+                            setState(() {
+                              _showPrototypeForm = !_showPrototypeForm;
+                            });
+                          },
+                          icon: Icon(
+                            _showPrototypeForm
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
+                            size: 16,
+                          ),
+                          label: Text(
+                            _showPrototypeForm ? 'Hide form' : 'Show form',
+                          ),
+                        ),
                       ),
                     ),
+                    if (_showPrototypeForm)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _PrototypeControlCard(
+                          theme: theme,
+                          selectionStage: _tapSelectionStage,
+                          hasBusPoint: _prototypeBusPosition != null,
+                          hasStudentPoint: _studentPosition != null,
+                          availableRoutes: availableRoutes,
+                          selectedRouteId: selectedRouteId,
+                          busSpeedMetersPerSec: _busSpeedMetersPerSec,
+                          studentSpeedMetersPerSec: _studentWalkMetersPerSec,
+                          onRouteChanged: (routeId) {
+                            setState(() {
+                              _forcedRouteId = routeId;
+                              _tapSelectionStage = _TapSelectionStage.bus;
+                              _prototypeBusPosition = null;
+                              _studentPosition = null;
+                              _pickupSuggestion = null;
+                              _refreshSelectedBusState();
+                            });
+                            unawaited(_recomputePickupSuggestion());
+                          },
+                          onResetSelection: () {
+                            setState(() {
+                              _tapSelectionStage = _TapSelectionStage.bus;
+                              _prototypeBusPosition = null;
+                              _studentPosition = null;
+                              _pickupSuggestion = null;
+                            });
+                            unawaited(_recomputePickupSuggestion());
+                          },
+                          onBusSpeedChanged: (value) {
+                            setState(() {
+                              _busSpeedMetersPerSec = value;
+                              _pickupSuggestion = null;
+                            });
+                            unawaited(_recomputePickupSuggestion());
+                          },
+                          onStudentSpeedChanged: (value) {
+                            setState(() {
+                              _studentWalkMetersPerSec = value;
+                              _pickupSuggestion = null;
+                            });
+                            unawaited(_recomputePickupSuggestion());
+                          },
+                        ),
+                      ),
                     if (_studentPosition != null ||
                         _pickupSuggestion != null ||
                         _pickupLoading)
