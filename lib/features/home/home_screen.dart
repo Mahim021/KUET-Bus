@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../main/main_shell.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/theme/app_theme.dart';
@@ -54,9 +56,28 @@ class HomeScreen extends StatelessWidget {
   Widget _buildHeader(BuildContext context) {
     final theme = AppThemeData.of(context);
     final session = UserSession.instance;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Row(
+      child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        stream: uid != null
+            ? FirebaseFirestore.instance
+                .collection('users')
+                .doc(uid)
+                .snapshots()
+            : const Stream.empty(),
+        builder: (context, snapshot) {
+          final data = snapshot.data?.data();
+          // Prefer Firestore data; fall back to UserSession populated at login
+          final name = (data?['name'] as String?)?.trim().split(' ').first ??
+              session.name.split(' ').first;
+          final photoUrl =
+              (data?['photoUrl'] as String?) ?? session.photoUrl;
+          final email =
+              (data?['email'] as String?) ?? session.email;
+
+          return Row(
         children: [
           GestureDetector(
             onTap: () =>
@@ -69,11 +90,12 @@ class HomeScreen extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: theme.border),
               ),
-              child: session.photoUrl != null
+              child: photoUrl != null
                   ? ClipOval(
                       child: Image.network(
-                        session.photoUrl!,
+                        photoUrl,
                         fit: BoxFit.cover,
+                        key: ValueKey(photoUrl),
                         errorBuilder: (_, __, ___) => Icon(Icons.person_rounded,
                             size: 28, color: theme.subText),
                       ),
@@ -99,7 +121,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                       TextSpan(
-                        text: session.name.split(' ').first,
+                        text: name,
                         style: TextStyle(
                           color: theme.primaryAccent,
                           fontSize: 22,
@@ -111,7 +133,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  session.email,
+                  email,
                   style: TextStyle(
                     color: theme.subText,
                     fontSize: 13,
@@ -159,6 +181,8 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
         ],
+      );
+        },
       ),
     );
   }

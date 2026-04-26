@@ -19,6 +19,12 @@ class _KuetBusAppState extends State<KuetBusApp> {
   final _themeNotifier = AppThemeNotifier();
 
   @override
+  void initState() {
+    super.initState();
+    _themeNotifier.loadSavedTheme();
+  }
+
+  @override
   void dispose() {
     _themeNotifier.dispose();
     super.dispose();

@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../core/services/firestore_service.dart';
 import '../../core/services/user_session.dart';
 import '../main/main_shell.dart';
@@ -105,6 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final emailCtrl = TextEditingController();
     bool sent = false;
 
+    final theme = AppThemeData.of(context);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -114,10 +116,10 @@ class _LoginScreenState extends State<LoginScreen> {
           builder: (ctx, setSheetState) {
             final bottom = MediaQuery.of(ctx).viewInsets.bottom;
             return Container(
-              decoration: const BoxDecoration(
-                color: AppColors.background,
+              decoration: BoxDecoration(
+                color: theme.surface,
                 borderRadius:
-                    BorderRadius.vertical(top: Radius.circular(28)),
+                    const BorderRadius.vertical(top: Radius.circular(28)),
               ),
               padding: EdgeInsets.fromLTRB(24, 16, 24, bottom + 32),
               child: Column(
@@ -148,10 +150,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: AppColors.primary, size: 22),
                       ),
                       const SizedBox(width: 14),
-                      const Text(
+                      Text(
                         'Forgot Password',
                         style: TextStyle(
-                          color: AppColors.bodyText,
+                          color: theme.text,
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                         ),
@@ -159,10 +161,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  const Text(
+                  Text(
                     'Enter your registered email and we\'ll send you a link to reset your password.',
                     style: TextStyle(
-                      color: AppColors.subText,
+                      color: theme.subText,
                       fontSize: 13,
                       height: 1.5,
                     ),
@@ -266,8 +268,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = AppThemeData.of(context);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.bg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -292,12 +295,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text('KUET Bus', style: AppTextStyles.authAppTitle),
                     const SizedBox(height: 6),
                     Text('Your campus commute, simplified.',
-                        style: AppTextStyles.authSubtitle),
+                        style: AppTextStyles.authSubtitle.copyWith(
+                            color: theme.subText)),
                   ],
                 ),
               ),
               const SizedBox(height: 40),
-              Text('Log In', style: AppTextStyles.sectionTitle),
+              Text('Log In',
+                  style: AppTextStyles.sectionTitle.copyWith(
+                      color: theme.text)),
               const SizedBox(height: 24),
               AuthField(
                 hint: 'Email Address',
@@ -403,13 +409,14 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 28),
               Row(
                 children: [
-                  const Expanded(child: Divider(color: AppColors.divider)),
+                  Expanded(child: Divider(color: theme.border)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Text('OR CONTINUE WITH',
-                        style: AppTextStyles.dividerLabel),
+                        style: AppTextStyles.dividerLabel.copyWith(
+                            color: theme.label)),
                   ),
-                  const Expanded(child: Divider(color: AppColors.divider)),
+                  Expanded(child: Divider(color: theme.border)),
                 ],
               ),
               const SizedBox(height: 20),
@@ -451,7 +458,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         TextSpan(
                             text: "Don't have an account? ",
-                            style: AppTextStyles.bodySmall),
+                            style: AppTextStyles.bodySmall.copyWith(
+                                color: theme.subText)),
                         TextSpan(
                             text: 'Sign Up', style: AppTextStyles.linkBold),
                       ],

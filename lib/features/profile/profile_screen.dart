@@ -1,13 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../core/services/firestore_service.dart';
+import '../../core/services/user_session.dart';
 import '../../models/student.dart';
 import '../auth/login_screen.dart';
 
@@ -80,11 +82,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _uploadingImage = true);
     try {
       final file = File(picked.path);
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('profile_images/${user.uid}.jpg');
-      await ref.putFile(file);
-      final url = await ref.getDownloadURL();
+      final storagePath = 'avatars/${user.uid}.jpg';
+      final supabase = Supabase.instance.client;
+
+      await supabase.storage.from('avatars').upload(
+            storagePath,
+            file,
+            fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'),
+          );
+
+      final baseUrl = supabase.storage.from('avatars').getPublicUrl(storagePath);
+      final url = '$baseUrl?t=${DateTime.now().millisecondsSinceEpoch}';
 
       final current = _student;
       final updated = Student(
@@ -99,11 +107,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
         hometown: current?.hometown,
         phoneNumber: current?.phoneNumber,
         photoUrl: url,
-        photoPath: ref.fullPath,
+        photoPath: storagePath,
         createdAt: current?.createdAt,
         updatedAt: DateTime.now(),
       );
-      await _firestore.upsertStudent(updated);
+      // Refresh token then write only the photo fields — avoids full-object
+      // serialization issues and minimises the Firestore write surface.
+      await user.getIdToken(true);
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set(
+            {
+              'photoUrl': url,
+              'photoPath': storagePath,
+              'updatedAt': FieldValue.serverTimestamp(),
+            },
+            SetOptions(merge: true),
+          );
+      // Keep UserSession in sync so home screen header updates immediately
+      UserSession.instance.photoUrl = url;
       if (mounted) {
         setState(() {
           _student = updated;
@@ -233,6 +256,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       ? Image.network(
                                           photoUrl,
                                           fit: BoxFit.cover,
+                                          // key forces rebuild when URL changes
+                                          key: ValueKey(photoUrl),
                                           errorBuilder: (_, __, ___) =>
                                               const Icon(
                                             Icons.person_rounded,
@@ -541,16 +566,14 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = AppThemeData.of(context);
-    return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        decoration: BoxDecoration(
-          color: theme.bg,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+    final bottomPad = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, bottomPad + 32),
+      child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -629,6 +652,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
 }
 
 class _EditField extends StatelessWidget {
+
   final String label;
   final TextEditingController controller;
   final AppThemeData theme;

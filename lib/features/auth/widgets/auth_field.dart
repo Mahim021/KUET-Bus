@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/colors.dart';
-import '../../../core/constants/text_styles.dart';
+import '../../../core/theme/app_theme.dart';
 
-/// Reusable themed text field for all auth screens.
+/// Reusable themed text field for all auth screens — responds to dark mode.
 class AuthField extends StatefulWidget {
   const AuthField({
     super.key,
@@ -32,33 +31,44 @@ class _AuthFieldState extends State<AuthField> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = AppThemeData.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (widget.label != null) ...[
-          Text(widget.label!, style: AppTextStyles.fieldLabel),
+          Text(
+            widget.label!,
+            style: TextStyle(
+              color: theme.label,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.8,
+            ),
+          ),
           const SizedBox(height: 6),
         ],
         Container(
           decoration: BoxDecoration(
-            color: AppColors.fieldFill,
+            color: theme.fieldFill,
             borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: theme.border),
           ),
           child: TextField(
             controller: widget.controller,
             obscureText: widget.isPassword ? _obscure : false,
             keyboardType: widget.keyboardType,
             onChanged: widget.onChanged,
-            style: const TextStyle(fontSize: 15, color: AppColors.bodyText),
+            style: TextStyle(fontSize: 15, color: theme.text),
             decoration: InputDecoration(
               hintText: widget.hint,
-              hintStyle: AppTextStyles.fieldHint,
-              prefixIcon: Icon(widget.icon, color: AppColors.fieldIcon, size: 20),
+              hintStyle: TextStyle(color: theme.subText, fontSize: 15),
+              prefixIcon:
+                  Icon(widget.icon, color: theme.subText, size: 20),
               suffixIcon: widget.isPassword
                   ? IconButton(
                       icon: Icon(
                         _obscure ? Icons.visibility_off : Icons.visibility,
-                        color: AppColors.fieldIcon,
+                        color: theme.subText,
                         size: 20,
                       ),
                       onPressed: () => setState(() => _obscure = !_obscure),

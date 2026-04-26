@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ── Notifier ─────────────────────────────────────────────────────────────────
 
@@ -6,9 +7,17 @@ class AppThemeNotifier extends ChangeNotifier {
   bool _isDark = false;
   bool get isDark => _isDark;
 
-  void toggle() {
+  Future<void> loadSavedTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    _isDark = prefs.getBool('is_dark_mode') ?? false;
+    notifyListeners();
+  }
+
+  Future<void> toggle() async {
     _isDark = !_isDark;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_dark_mode', _isDark);
   }
 }
 
@@ -63,7 +72,6 @@ class AppThemeData {
       isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
   Color get label =>
       isDark ? const Color(0xFF776060) : const Color(0xFF9CA3AF);
-  // Primary accent: maroon in light, light-rose in dark (stays visible on dark surfaces)
   Color get primaryAccent =>
       isDark ? const Color(0xFFE07B7B) : const Color(0xFF3B0D0D);
 

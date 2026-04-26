@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
+import '../../../core/theme/app_theme.dart';
 import 'widgets/auth_field.dart';
 import 'profile_review_screen.dart';
 
@@ -65,8 +66,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = AppThemeData.of(context);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.bg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -82,15 +84,15 @@ class _SignupScreenState extends State<SignupScreen> {
                     child: Container(
                       width: 38,
                       height: 38,
-                      decoration: const BoxDecoration(
-                        color: AppColors.fieldFill,
+                      decoration: BoxDecoration(
+                        color: theme.surfaceDeep,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.arrow_back_ios_new,
-                          size: 16, color: AppColors.bodyText),
+                      child: Icon(Icons.arrow_back_ios_new,
+                          size: 16, color: theme.text),
                     ),
                   ),
-                  const Icon(Icons.more_horiz, color: AppColors.bodyText),
+                  Icon(Icons.more_horiz, color: theme.subText),
                 ],
               ),
               const SizedBox(height: 24),
@@ -100,8 +102,8 @@ class _SignupScreenState extends State<SignupScreen> {
                     Container(
                       width: 72,
                       height: 72,
-                      decoration: const BoxDecoration(
-                        color: AppColors.fieldFill,
+                      decoration: BoxDecoration(
+                        color: theme.surfaceDeep,
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.directions_bus_rounded,
@@ -113,10 +115,11 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
               ),
               const SizedBox(height: 28),
-              Text('Create Account', style: AppTextStyles.sectionTitle),
+              Text('Create Account',
+                  style: AppTextStyles.sectionTitle.copyWith(color: theme.text)),
               const SizedBox(height: 6),
               Text('Join the KUET Bus transportation community.',
-                  style: AppTextStyles.authSubtitle),
+                  style: AppTextStyles.authSubtitle.copyWith(color: theme.subText)),
               const SizedBox(height: 24),
               AuthField(
                 label: 'FULL NAME',
@@ -194,27 +197,26 @@ class _SignupScreenState extends State<SignupScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: RichText(
-                      text: const TextSpan(
-                        style:
-                            TextStyle(color: AppColors.subText, fontSize: 13),
+                      text: TextSpan(
+                        style: TextStyle(color: theme.subText, fontSize: 13),
                         children: [
-                          TextSpan(text: 'By signing up, you agree to our '),
+                          const TextSpan(text: 'By signing up, you agree to our '),
                           TextSpan(
                             text: 'Terms of Service',
                             style: TextStyle(
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.bodyText,
+                                color: theme.text,
                                 fontSize: 13),
                           ),
-                          TextSpan(text: ' and '),
+                          const TextSpan(text: ' and '),
                           TextSpan(
                             text: 'Privacy Policy',
                             style: TextStyle(
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.bodyText,
+                                color: theme.text,
                                 fontSize: 13),
                           ),
-                          TextSpan(text: '.'),
+                          const TextSpan(text: '.'),
                         ],
                       ),
                     ),

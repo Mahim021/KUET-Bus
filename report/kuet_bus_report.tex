@@ -257,7 +257,7 @@ We feel so thankful to our supervisor, \textbf{Most. Kaniz Fatema Isha}, \textit
 
 We also wish to appreciate the Head of the Department and the faculty members of the CSE department at KUET as well. The KUET transport office was also very cooperative in providing the data on bus schedules and bus routes without which the system could not have been based in reality.
 
-Our project is based on the work of others --- Flutter, Firebase, Render, OpenStreetMap and the research community whose work on IoT tracking and AI systems we studied thoroughly. It is also thanks to OpenAI that the GPT-4o API is available, which uses the chatbot at the core of this system.
+Our project is based on the work of others Flutter, Firebase, Render, OpenStreetMap and the research community whose work on IoT tracking and AI systems we studied thoroughly. It is also thanks to OpenAI that the GPT-4o API is available, which uses the chatbot at the core of this system.
 
 \vspace{36pt}
 \begin{flushright}
@@ -280,7 +280,7 @@ The system consists of a hardware and a software part. On the hardware side, a T
 
 But we added more. KUET notifies us of bus schedules via email, so we created a pipeline: a Google Apps Script receives the email and forwards it to GPT-4o, which parses the email to generate the schedule as structured JSON. It is reviewed by an admin and made live. When a student anywhere in Khulna wants to know where to pick up the bus, the app computes the A\textsuperscript{*} pathfinding algorithm on the road network in the city, and advises them on which intersection to walk to.
 
-Our test results: GPS updates came with an average of 3.8~seconds. A\textsuperscript{*} required less than 16~ms to complete each test query. Ten students took the chatbot GPT-4o through informal testing and it got the answer right 92\% of the time --- provided that a live schedule was in the database.
+Our test results: GPS updates came with an average of 3.8~seconds. A\textsuperscript{*} required less than 16~ms to complete each test query. Ten students took the chatbot GPT-4o through informal testing and it got the answer right 92\% of the time provided that a live schedule was in the database.
 
 \vspace{12pt}
 \noindent\textbf{Keywords:} Flutter, Firebase, GPS Tracking, Real-Time Location, A\textsuperscript{*} Pathfinding, OpenAI GPT-4o, IoT, Bus Management, KUET, Campus Transit.
@@ -324,13 +324,13 @@ Our test results: GPS updates came with an average of 3.8~seconds. A\textsupersc
 
 \section{Introduction}
 
-Talk to any KUET student regarding the bus. It has been missed at least once, chances are --- not because they were late, but because they did not even know when it was going to arrive. The schedule is posted somewhere on a notice board, it might be in a WhatsApp group as well, just maybe, in the correct one. When the transport office makes any changes, it may or may not come to you on the same day. And even when you do know the time, it is still a daily experience to be at a stop and ask yourself whether the bus has already passed or not.
+Talk to any KUET student regarding the bus. It has been missed at least once, chances are not because they were late, but because they did not even know when it was going to arrive. The schedule is posted somewhere on a notice board, it might be in a WhatsApp group as well, just maybe, in the correct one. When the transport office makes any changes, it may or may not come to you on the same day. And even when you do know the time, it is still a daily experience to be at a stop and ask yourself whether the bus has already passed or not.
 
 This was a year or more, to which we each contributed, before we arrived at any decision to do anything about it. The equipment we required was not costly or difficult to obtain. One only needed a development board, a free Firebase account, and an OpenAI API key to create something that would be of actual use.
 
 \section{Background and Problem Statement}
 
-The KUET buses do not have any GPS tracking. Nothing. Once there is a change in a schedule, someone is emailed by the transport office, so student often dont have the up to date schedule. And even when you have the right schedule --- what then? You are still at the stop without knowing whether the bus will be there in two minutes or it is already passed.
+The KUET buses do not have any GPS tracking. Nothing. Once there is a change in a schedule, someone is emailed by the transport office, so student often dont have the up to date schedule. And even when you have the right schedule what then? You are still at the stop without knowing whether the bus will be there in two minutes or it is already passed.
 
 The issues that we continued to encounter after discussing our experiences with classmates and reflecting on our own were the following:
 
@@ -357,7 +357,7 @@ We didn't want to focus on just one of these. The aim was to improve the entire 
 
 \section{Scope}
 
-The project covers the entire journey --- from a tiny board sitting in the bus to a Firebase server and to a passenger's cell phone. Here is what we used:
+The project covers the entire journey from a tiny board sitting in the bus to a Firebase server and to a passenger's cell phone. Here is what we used:
 
 \begin{itemize}[leftmargin=*]
   \item \textbf{Hardware}: TTGO T-Call v1.3 (ESP32 + SIM800L GSM/GPRS + NEO-6M GPS), Arduino firmware with TinyGSM library.
@@ -373,11 +373,11 @@ Our geographical area of focus was the KUET campus and the city of Khulna covere
 
 \section{Novelty of the Problem and Solution}
 
-None of this is new individually. GPS tracking exists. Bus apps exist. GPT-4o exists. But putting them all together from scratch, for an organisation that does not have any digital infrastructure, in a way that makes sense for that organisation --- that is the bit that is genuinely different.
+None of this is new individually. GPS tracking exists. Bus apps exist. GPT-4o exists. But putting them all together from scratch, for an organisation that does not have any digital infrastructure, in a way that makes sense for that organisation that is the bit that is genuinely different.
 
 OneBusAway and TransLoc are great products. They are just not for KUET. TransLoc requires GTFS data and hardware that costs hundreds of dollars per bus. OneBusAway needs a transit agency back-end. Neither is set up for the case where the schedule comes as an email from a transport office administrator and needs to be processed, edited and published. That is how KUET works and there is no existing system built for that.
 
-The email pipeline evolved in response to a very specific fact: the KUET transport office does not use a database, they use email. That is how we went about it. GPT-4o extracts the fields from the email, and then the result sits in ``pending'' mode until the admin signs off. It is not entirely automated --- we wanted to leave it to a human because a wrong departure time is disastrous. But it dramatically decreases the effort.
+The email pipeline evolved in response to a very specific fact: the KUET transport office does not use a database, they use email. That is how we went about it. GPT-4o extracts the fields from the email, and then the result sits in ``pending'' mode until the admin signs off. It is not entirely automated we wanted to leave it to a human because a wrong departure time is disastrous. But it dramatically decreases the effort.
 
 The boarding point feature is ours. It does a thing that no other transit app we found attempts: you are somewhere in the city, you know the bus is coming, and you want to know where to go to intercept it. It is an A\textsuperscript{*} search problem on the road network, and it works.
 
@@ -437,7 +437,7 @@ Before we started to build, we surveyed the landscape. Some of it was useful. So
 
 \subsection{General Real-Time Bus Tracker}
 
-Hassan et al.~\cite{hassan2014gps} developed a GPS/GPRS bus tracker for the developing world that pushed updates via SMS. It works, but it takes 30--60 seconds for the SMS to arrive and there is a cost for every message, so real-time tracking is not feasible. We prefer a SIM800L module with GPRS data, which sends updates to Firebase every few seconds without the per-message cost.
+Hassan ~\cite{hassan2014gps} developed a GPS/GPRS bus tracker for the developing world that pushed updates via SMS. It works, but it takes 30--60 seconds for the SMS to arrive and there is a cost for every message, so real-time tracking is not feasible. We prefer a SIM800L module with GPRS data, which sends updates to Firebase every few seconds without the per-message cost.
 
 TransLoc~\cite{transloc2024} is the leading commercial transit system for universities. It is polished and well-supported, but it needs data in the GTFS format and a USD 300--800 investment per vehicle for on-board equipment. Such a system is out of reach for institutions like KUET, which have no formal transit data collection infrastructure.
 
@@ -445,23 +445,23 @@ Khanna and Anand~\cite{khanna2016iot} tracked school buses with a Raspberry Pi a
 
 \subsection{University Campus Transit Applications}
 
-Eltayeb et al.~\cite{eltayeb2021} developed a bus location app for a Sudanese university using Firebase and Google Maps. It updated every 10 seconds (acceptable) but only displayed the bus location --- it did not allow for schedule management, route planning, or an admin interface. We cover all of those.
+Eltayeb ~\cite{eltayeb2021} developed a bus location app for a Sudanese university using Firebase and Google Maps. It updated every 10 seconds (acceptable) but only displayed the bus location it did not allow for schedule management, route planning, or an admin interface. We cover all of those.
 
 OneBusAway~\cite{ferris2010onebusaway} is the most well-known open-source university bus tracker. It does a good job on arrival time prediction, but it needs a GTFS data source and there is no AI support for student queries and no guidance for a student who is not at a standard bus stop.
 
-Abutaleb et al.~\cite{abutaleb2015nfc} took a different approach and used NFC tap-in events to infer the location of the bus. It is novel, but the location accuracy is poor and the system does not provide a map or help the student determine their walking direction.
+Abutaleb ~\cite{abutaleb2015nfc} took a different approach and used NFC tap-in events to infer the location of the bus. It is novel, but the location accuracy is poor and the system does not provide a map or help the student determine their walking direction.
 
 \subsection{AI and NLP for Transportation}
 
-LLMs are a new application for transit information. Zheng et al.~\cite{zheng2024llm} demonstrated that GPT-3 could describe GTFS travel itineraries in simple terms, thereby making travel information more accessible to the general public. Our chatbot extends the concept: instead of explaining itineraries, we inject the live schedule for the current day directly into the model's context window before the student asks a question, so the model can provide today-specific answers without any fine-tuning.
+LLMs are a new application for transit information. Zheng ~\cite{zheng2024llm} demonstrated that GPT-3 could describe GTFS travel itineraries in simple terms, thereby making travel information more accessible to the general public. Our chatbot extends the concept: instead of explaining itineraries, we inject the live schedule for the current day directly into the model's context window before the student asks a question, so the model can provide today-specific answers without any fine-tuning.
 
-Lin et al.~\cite{lin2023ai} used NLP techniques to parse schedule information from PDFs. We do the same, but for email text which is more unstructured than a formatted PDF. GPT-4o handles it well in our tests.
+Lin ~\cite{lin2023ai} used NLP techniques to parse schedule information from PDFs. We do the same, but for email text which is more unstructured than a formatted PDF. GPT-4o handles it well in our tests.
 
 \subsection{Graph Algorithms for Transit Routing}
 
 A\textsuperscript{*}~\cite{hart1968formal} is the default algorithm for shortest-path queries on road networks, and we use it here on the Khulna city road graph. Goldberg and Harrelson~\cite{goldberg2005astar} demonstrated the scalability of A\textsuperscript{*} to continent-sized networks with some preprocessing, but we have around 45,000 nodes for the Khulna network and our queries finish in under 15~ms without any preprocessing. The simpler approach is good enough for our scale.
 
-Bast et al.~\cite{bast2016route} evaluated a wide range of transit routing algorithms. According to their analysis, A\textsuperscript{*} on a static road graph is the right tool for our problem --- finding the optimal meeting point for a student and an incoming bus --- rather than the more sophisticated algorithms designed for full multi-stop transit planning.
+Bast ~\cite{bast2016route} evaluated a wide range of transit routing algorithms. According to their analysis, A\textsuperscript{*} on a static road graph is the right tool for our problem finding the optimal meeting point for a student and an incoming bus rather than the more sophisticated algorithms designed for full multi-stop transit planning.
 
 \section{Discussion}
 
@@ -475,18 +475,18 @@ Table~\ref{tab:relatedcomp} summarizes the comparison between the proposed KUET 
 \toprule
 \textbf{System} & \textbf{Real-Time GPS} & \textbf{Schedule Mgmt} & \textbf{Route Guide} & \textbf{AI Chatbot} & \textbf{Auto Schedule Extract} & \textbf{Low-Cost HW}\\
 \midrule
-Hassan et al.~\cite{hassan2014gps}        & Partial & No  & No  & No  & No  & Yes \\
+Hassan ~\cite{hassan2014gps}        & Partial & No  & No  & No  & No  & Yes \\
 TransLoc~\cite{transloc2024}             & Yes     & Yes & No  & No  & No  & No  \\
 Khanna \& Anand~\cite{khanna2016iot}     & Yes     & No  & No  & No  & No  & Yes \\
-Eltayeb et al.~\cite{eltayeb2021}        & Yes     & No  & No  & No  & No  & Yes \\
+Eltayeb ~\cite{eltayeb2021}        & Yes     & No  & No  & No  & No  & Yes \\
 OneBusAway~\cite{ferris2010onebusaway}   & Yes     & Yes & No  & No  & No  & No  \\
-Zheng et al.~\cite{zheng2024llm}         & No      & No  & No  & Yes & No  & N/A \\
+Zheng ~\cite{zheng2024llm}         & No      & No  & No  & Yes & No  & N/A \\
 \textbf{KUET Bus (Ours)} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes}\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-The table makes the gap pretty clear. None of the existing systems ticks all six boxes. We have the only one that combines cheap on-bus GPS devices, an AI algorithm to extract schedules, route planning based on A\textsuperscript{*}, and a chatbot that knows today's bus schedule. All of this exists in the literature in one form or another. What we did was put it all together for an institution that is starting from scratch --- no GTFS data, no existing hardware, no schedule database. That is where we have made a contribution.
+The table makes the gap pretty clear. None of the existing systems ticks all six boxes. We have the only one that combines cheap on-bus GPS devices, an AI algorithm to extract schedules, route planning based on A\textsuperscript{*}, and a chatbot that knows today's bus schedule. All of this exists in the literature in one form or another. What we did was put it all together for an institution that is starting from scratch no GTFS data, no existing hardware, no schedule database. That is where we have made a contribution.
 
 % =============================================================================
 %  CHAPTER III  —  METHODOLOGY
@@ -495,7 +495,7 @@ The table makes the gap pretty clear. None of the existing systems ticks all six
 
 \section{Introduction}
 
-The challenge in designing a system like this is that it needs to be done all at once. The hardware, the backend, the app, the AI pipeline, and the routing engine all needed to be designed concurrently, even though they were all interdependent. This chapter will explore each of these components and attempt to describe not only what we developed but why we developed it --- because it only makes sense in context.
+The challenge in designing a system like this is that it needs to be done all at once. The hardware, the backend, the app, the AI pipeline, and the routing engine all needed to be designed concurrently, even though they were all interdependent. This chapter will explore each of these components and attempt to describe not only what we developed but why we developed it because it only makes sense in context.
 
 \section{Detailed Methodology}
 
@@ -610,13 +610,13 @@ Figure~\ref{fig:arch} shows how the different parts of the system connect to eac
 \label{fig:arch}
 \end{figure}
 
-There are three distinct things going on in this system. The GPS path is the easy one: hardware transmits a location every few seconds, Firestore puts it in the database, the app fetches it and updates the marker. Simple. The schedule path is more complicated --- an email comes in, the Apps Script grabs it, a Cloud Function passes the unfiltered text to GPT-4o, and then the response goes into Firestore marked as ``pending'' until someone clicks the Approve button. Students do not get anything until then. The chatbot path uses next to nothing: a question arrives, the app grabs today's approved schedule from Firestore (0.3~s), adds it to the GPT-4o request as context, and returns the result.
+There are three distinct things going on in this system. The GPS path is the easy one: hardware transmits a location every few seconds, Firestore puts it in the database, the app fetches it and updates the marker. Simple. The schedule path is more complicated an email comes in, the Apps Script grabs it, a Cloud Function passes the unfiltered text to GPT-4o, and then the response goes into Firestore marked as ``pending'' until someone clicks the Approve button. Students do not get anything until then. The chatbot path uses next to nothing: a question arrives, the app grabs today's approved schedule from Firestore (0.3~s), adds it to the GPT-4o request as context, and returns the result.
 
 \subsection{Hardware Design}
 
 \subsubsection{TTGO T-Call Module}
 
-We quickly settled on the TTGO T-Call v1.3 once we started looking at the options for less than \$25. It is one board with an ESP32, a SIM800L GSM module, and a GPS module connector. No Wi-Fi required. This is important because the buses leave the campus --- if they were connected to Wi-Fi, the connection would drop as soon as they left the campus. Using a 2G SIM card, the tracker will work anywhere that Grameenphone or Robi have coverage, which is anywhere on the route. Table~\ref{tab:hwspec} has the full specs.
+We quickly settled on the TTGO T-Call v1.3 once we started looking at the options for less than \$25. It is one board with an ESP32, a SIM800L GSM module, and a GPS module connector. No Wi-Fi required. This is important because the buses leave the campus if they were connected to Wi-Fi, the connection would drop as soon as they left the campus. Using a 2G SIM card, the tracker will work anywhere that Grameenphone or Robi have coverage, which is anywhere on the route. Table~\ref{tab:hwspec} has the full specs.
 
 \begin{table}[t]
 \caption{TTGO T-Call v1.3 Hardware Specifications}
@@ -642,7 +642,7 @@ Dimensions        & 50 mm $\times$ 27 mm $\times$ 13 mm \\
 
 \subsubsection{Firmware Operation}
 
-There is nothing hard about the firmware. It opens a GPRS connection, reads the GPS, checks that the GPS fix is good (HDOP under 2.0, at least 4 satellites in view), and if it is, sends the coordinates to Firestore as a JSON PATCH request. It waits 3 seconds and repeats. If the mobile signal is dropped --- which occurs in a couple of places on the route --- it retries with a back-off. This was the most-tweaked part of the firmware.
+There is nothing hard about the firmware. It opens a GPRS connection, reads the GPS, checks that the GPS fix is good (HDOP under 2.0, at least 4 satellites in view), and if it is, sends the coordinates to Firestore as a JSON PATCH request. It waits 3 seconds and repeats. If the mobile signal is dropped which occurs in a couple of places on the route it retries with a back-off. This was the most-tweaked part of the firmware.
 
 \subsection{Mobile Application Architecture}
 
@@ -727,7 +727,7 @@ We downloaded the Khulna road network from OpenStreetMap and converted it to a G
 
 \subsubsection{Algorithm Description}
 
-Algorithm~\ref{alg:astar} shows the A\textsuperscript{*} implementation. We use the Haversine great-circle distance as the heuristic because road distance is always at least as great as straight-line distance --- so the heuristic is never greater than the actual cost, which is the admissibility condition A\textsuperscript{*} requires.
+Algorithm~\ref{alg:astar} shows the A\textsuperscript{*} implementation. We use the Haversine great-circle distance as the heuristic because road distance is always at least as great as straight-line distance so the heuristic is never greater than the actual cost, which is the admissibility condition A\textsuperscript{*} requires.
 
 \begin{algorithm}[t]
 \caption{A\textsuperscript{*} Pathfinding on Khulna Road Network}
@@ -759,7 +759,7 @@ The open set is a binary min-heap that allows $O(\log n)$ insert, extract-min, a
 
 \subsubsection{Boarding Point Recommendation}
 
-When a student enables the route guidance feature, the app first gets the student's location using the \texttt{geolocator} package. Then it: (1)~finds all candidate intersection nodes on the bus route within a configurable radius; (2)~for each candidate node, runs A\textsuperscript{*} from the current bus location to estimate bus travel distance and ETA; (3)~runs A\textsuperscript{*} from the student's snapped road node to calculate student walking distance; (4)~chooses the node with the largest time margin --- the intersection the student can reach before the bus arrives with the most buffer; and (5)~draws the walking route on the map in green.
+When a student enables the route guidance feature, the app first gets the student's location using the \texttt{geolocator} package. Then it: (1)~finds all candidate intersection nodes on the bus route within a configurable radius; (2)~for each candidate node, runs A\textsuperscript{*} from the current bus location to estimate bus travel distance and ETA; (3)~runs A\textsuperscript{*} from the student's snapped road node to calculate student walking distance; (4)~chooses the node with the largest time margin the intersection the student can reach before the bus arrives with the most buffer; and (5)~draws the walking route on the map in green.
 
 \subsection{AI Chatbot Integration}
 
@@ -814,9 +814,9 @@ We measured five things:
 \begin{itemize}[leftmargin=*]
   \item \textbf{GPS Update Latency}: The time between when the TTGO T-Call gets a GPS fix and when the Flutter app receives it and updates the bus marker on the map.
   \item \textbf{A\textsuperscript{*} Query Time}: The total time it takes to run the pathfinding algorithm, measured by a Dart \texttt{Stopwatch} inside it.
-  \item \textbf{Nodes Explored}: How many nodes A\textsuperscript{*} checks before finding an answer --- the fewer nodes, the better the heuristic is doing its job.
+  \item \textbf{Nodes Explored}: How many nodes A\textsuperscript{*} checks before finding an answer the fewer nodes, the better the heuristic is doing its job.
   \item \textbf{Chatbot Response Time}: How long it takes for the chatbot to respond from when the student sends a message, including the Firestore schedule fetch and OpenAI API call.
-  \item \textbf{Schedule Extraction Accuracy}: Of all the fields GPT-4o attempts to extract (bus number, time, route, direction, days), what percentage does it get right --- tested on 20 real historical emails.
+  \item \textbf{Schedule Extraction Accuracy}: Of all the fields GPT-4o attempts to extract (bus number, time, route, direction, days), what percentage does it get right tested on 20 real historical emails.
 \end{itemize}
 
 \section{Dataset}
@@ -849,40 +849,17 @@ GPS fix accuracy      & $\pm$3.1 m (mean CEP, outdoor) \\
 \end{tabular}
 \end{table}
 
-3.8~s average is well under our 5~s target. The few results above 6~s occurred when the SIM800L was temporarily out of 2G coverage --- there are a few signal gaps on the route, and re-establishing the connection takes time. There is not much we can do short of upgrading to 4G, which is on the future work list. The GPS accuracy of $\pm$3.1~m is sufficient for a map marker. You do not need centimetre precision to know the bus is at the roundabout.
+3.8~s average is well under our 5~s target. The few results above 6~s occurred when the SIM800L was temporarily out of 2G coverage there are a few signal gaps on the route, and re-establishing the connection takes time. There is not much we can do short of upgrading to 4G, which is on the future work list. The GPS accuracy of $\pm$3.1~m is sufficient for a map marker. You do not need centimetre precision to know the bus is at the roundabout.
 
 \subsection{A* Algorithm Performance}
 
 Table~\ref{tab:astar} shows A\textsuperscript{*} results for ten route pairs across the Khulna road network.
 
-\begin{table}[t]
-\caption{A\textsuperscript{*} Performance Results for Representative Route Pairs}
-\label{tab:astar}
-\centering
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Route Pair} & \textbf{Distance (km)} & \textbf{Nodes Explored} & \textbf{Time (ms)} & \textbf{Path Found}\\
-\midrule
-KUET Gate $\to$ Shibbari         & 4.2  & 218  & 8.4  & Yes \\
-KUET Gate $\to$ Boyra            & 6.1  & 312  & 11.7 & Yes \\
-KUET Gate $\to$ Sonadanga        & 7.8  & 445  & 14.3 & Yes \\
-KUET Gate $\to$ Khalishpur       & 5.3  & 276  & 10.1 & Yes \\
-KUET Gate $\to$ Rupsha           & 9.4  & 521  & 18.6 & Yes \\
-Boyra $\to$ Sonadanga            & 5.2  & 301  & 12.2 & Yes \\
-Khalishpur $\to$ Shibbari        & 6.7  & 389  & 15.4 & Yes \\
-Rupsha $\to$ Khalishpur          & 8.8  & 502  & 19.1 & Yes \\
-KUET Gate $\to$ Daulatpur        & 10.3 & 587  & 21.8 & Yes \\
-KUET Gate $\to$ Ferrighat        & 12.1 & 643  & 24.7 & Yes \\
-\midrule
-\textbf{Average}                 & \textbf{7.6} & \textbf{419} & \textbf{15.6} & \textbf{100\%}\\
-\bottomrule
-\end{tabular}
-\end{table}
 All queries succeeded. Average time: 15.6~ms. We were shooting for 100~ms, so the algorithm takes about $\tfrac{3}{5}$ of a second. Obviously, the longer the travelled distance, the more nodes we visit. But even the farthest query (Ferrighat, 12.1~km) took less than 25~ms. That's imperceptible on a mobile device.
 
 \subsection{AI Chatbot and Schedule Extraction}
 
-The average time it takes the chatbot to respond is 2.4~seconds. This includes the time spent calling the OpenAI API (2.1~s) --- it only takes 0.3~s to query Firestore. To test the chatbot, we got 10 classmates to chat with the chatbot for a couple of minutes and ask bus-related questions. They got a response of 92\% correct. This was because no schedule had been approved on that day, so the bot was guessing.
+The average time it takes the chatbot to respond is 2.4~seconds. This includes the time spent calling the OpenAI API (2.1~s) it only takes 0.3~s to query Firestore. To test the chatbot, we got 10 classmates to chat with the chatbot for a couple of minutes and ask bus-related questions. They got a response of 92\% correct. This was because no schedule had been approved on that day, so the bot was guessing.
 
 Extracting the schedule: See Table~\ref{tab:extractacc}. GPT-4o has an accuracy of 94\% on 20 emails. Route names were 100\% every time. The hard ones were those in Bengali: it tried extracting those, but got the departure time incorrect in two emails, and days of operation incorrect in two emails.
 \begin{table}[t]
@@ -954,7 +931,7 @@ The chatbot question is more complex. GPT-4o is good but not perfect, and if a s
 We do not track, data mine or advertise. The app does only one thing: help students get on the bus.
 \section{Safety Considerations}
 
-We once discussed a scenario: a student walking to the bus stop and looking at the live map and getting hit by traffic. This is not farfetched --- it occurs with existing maps apps. We designed our live map so that once it loads, the bus marker automatically moves and the student does not need to tap or scroll. The phone does not tell the user every couple of seconds to check the screen. There is also a single line in the onboarding that warns about not using the phone when crossing the street. No doubt most students will ignore it, but it is there.
+We once discussed a scenario: a student walking to the bus stop and looking at the live map and getting hit by traffic. This is not farfetched it occurs with existing maps apps. We designed our live map so that once it loads, the bus marker automatically moves and the student does not need to tap or scroll. The phone does not tell the user every couple of seconds to check the screen. There is also a single line in the onboarding that warns about not using the phone when crossing the street. No doubt most students will ignore it, but it is there.
 
 On hardware safety: the TTGO T-Call is in a 3D-printed box screwed into the bus interior, powered from a USB port. The enclosure prevents accidental shorts. The LiPo provides power if there is a temporary loss of USB power, which does occur when the bus engine is starting.
 
@@ -991,7 +968,7 @@ The TTGO T-Call is an off-the-shelf development board. It should stand up to a 3
 % =============================================================================
 \chapter{Solving Complex Engineering Problems and Conducting Activities}
 
-\chapter{Complex Engineering Problems with the Current Project}
+\section{Complex Engineering Problems with the Current Project}
 
 Some of the most difficult parts of this project didn't involve the components, but the interactions between the components, where two different fields meet and the answer is far from obvious.
 
@@ -1014,13 +991,13 @@ We also had to implement a binary min-heap. The existing Dart sorted data struct
 	Approval by the administrator is an engineering solution: the AI is doing all the work the admin would have done in 10 minutes of copy-pasting, but it is not publishing anything until it is approved. It's a trade-off between efficiency and trust. 30 seconds to approve is a lot shorter than an hour of copy-pasting.
 \subsection*{Security Rules in a Serverless Database}
 
-We do not have a server-side API that queries Firestore --- the app accesses Firestore directly. That means all security logic has to be written in Firestore's declarative rules language, hosted on Google's servers. This is not as straightforward as it sounds: students should be able to read any approved schedule but not write one; admins should be able to perform cross-document transactions without the rules rejecting their writes mid-transaction; no user should be able to read another user's profile; and the unique-bus-number index collections need to be admin-only. It took careful experimentation in the Firebase Emulator Suite's rules simulator --- which lets you test individual read and write scenarios against the rules without touching live data --- to develop rules that satisfy all of these without unintentional loopholes.
+We do not have a server-side API that queries Firestore the app accesses Firestore directly. That means all security logic has to be written in Firestore's declarative rules language, hosted on Google's servers. This is not as straightforward as it sounds: students should be able to read any approved schedule but not write one; admins should be able to perform cross-document transactions without the rules rejecting their writes mid-transaction; no user should be able to read another user's profile; and the unique-bus-number index collections need to be admin-only. It took careful experimentation in the Firebase Emulator Suite's rules simulator which lets you test individual read and write scenarios against the rules without touching live data to develop rules that satisfy all of these without unintentional loopholes.
 
 \section{Complex Engineering Activities for the Project}
 
 \subsection*{Working With Five Concurrently Built Systems}
 
-The hardware, Firebase backend, Flutter app, AI pipeline, and routing engine were all being developed simultaneously by the two of us --- and they all had to communicate with each other. Each system had its own data model and failure modes. When the hardware side used \texttt{lat}/\texttt{lng} keys but the app expected \texttt{latitude}/\texttt{longitude}, nothing crashed --- the marker just silently stopped updating. To find these gaps we agreed on shared Dart model classes (\texttt{BusLocation}, \texttt{BusSchedule}, \texttt{BusRoute}, \texttt{Notice}, \texttt{Student}) from the start and did a lot of end-to-end integration testing. Most of the bugs we found were not inside a single component but in one component's assumptions about another.
+The hardware, Firebase backend, Flutter app, AI pipeline, and routing engine were all being developed simultaneously by the two of us and they all had to communicate with each other. Each system had its own data model and failure modes. When the hardware side used \texttt{lat}/\texttt{lng} keys but the app expected \texttt{latitude}/\texttt{longitude}, nothing crashed the marker just silently stopped updating. To find these gaps we agreed on shared Dart model classes (\texttt{BusLocation}, \texttt{BusSchedule}, \texttt{BusRoute}, \texttt{Notice}, \texttt{Student}) from the start and did a lot of end-to-end integration testing. Most of the bugs we found were not inside a single component but in one component's assumptions about another.
 
 \subsection*{Making the Tracker Last an Entire Day}
 
@@ -1203,12 +1180,13 @@ void loop() {
 \begin{center}
 {\normalfont\bfseries\fontsize{14}{21}\selectfont REFERENCES}
 \end{center}
-\vspace{24pt}
 
-\renewcommand{\bibname}{}   % suppress duplicate heading from \bibliography
+\begingroup
+\renewcommand{\chapter}[2]{}  % stop \bibliography from adding its own chapter heading
 \begin{spacing}{1.2}
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
 \end{spacing}
+\endgroup
 
 \end{document}

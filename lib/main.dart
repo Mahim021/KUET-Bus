@@ -3,9 +3,15 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'firebase_options.dart';
 import 'features/schedule/pending_schedule_screen.dart';
+
+// ── Supabase credentials ──────────────────────────────────────────────────────
+const _supabaseUrl = 'https://crszgsnkceapzjnjzckj.supabase.co';
+const _supabaseAnonKey =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNyc3pnc25rY2VhcHpqbmp6Y2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMjM4NTMsImV4cCI6MjA5MjY5OTg1M30.O4JN_9oTBYLlDDFEtU2vVvBw77gIqzsaj0SIui4jTS0';
 
 // ── Local notifications plugin (global so FCM foreground handler can use it) ──
 final FlutterLocalNotificationsPlugin localNotifications =
@@ -27,6 +33,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  await Supabase.initialize(url: _supabaseUrl, anonKey: _supabaseAnonKey);
 
   // Register background handler before anything else on mobile platforms.
   if (!kIsWeb) {
